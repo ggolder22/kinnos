@@ -41,8 +41,9 @@
   <!-- ── Main ── -->
   <div class="main">
     <div class="topbar">
-      <div>
-        <h2 id="topbar-materia">Seleccioná una materia</h2>
+      <button class="menu-toggle" onclick="toggleDrawer()" aria-label="Menú">&#9776;</button>
+      <div style="flex:1;min-width:0">
+        <h2 id="topbar-materia" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Seleccioná una materia</h2>
         <div id="topbar-sub" class="topbar-sub"></div>
       </div>
       <div class="topbar-right">
@@ -77,6 +78,8 @@
   </div>
 
 </div><!-- /app -->
+
+<div class="drawer-backdrop" onclick="closeDrawer()"></div>
 
 <!-- ── Toast ── -->
 <div id="toast-container"></div>
@@ -176,6 +179,18 @@
   }
 
   AlumnoMaterias.init();
+
+  function toggleDrawer() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelector('.drawer-backdrop').classList.toggle('visible');
+  }
+  function closeDrawer() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.querySelector('.drawer-backdrop').classList.remove('visible');
+  }
+  document.querySelector('.sidebar nav').addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeDrawer();
+  });
 </script>
 
 </body>

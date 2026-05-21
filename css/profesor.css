@@ -24,6 +24,15 @@
 .tab:hover  { color: var(--text-1); }
 .tab.active { color: var(--text-1); font-weight: 600; border-bottom-color: var(--accent); }
 
+@media (max-width: 768px) {
+  .tabs-bar {
+    padding: 0 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab { white-space: nowrap; }
+}
+
 /* ── Topbar materia info ── */
 .topbar-sub {
   font-size: 0.72rem;
