@@ -80,6 +80,22 @@
 <div id="toast-container"></div>
 
 <!-- ════════════════════════════════════════════
+     MODAL: Visor PDF
+════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="pdf-modal">
+  <div class="modal" style="max-width:860px;width:95vw;height:90vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)">
+      <span id="pdf-modal-titulo" style="font-weight:600;font-size:.95rem;color:var(--text-1)"></span>
+      <div style="display:flex;gap:8px">
+        <a id="pdf-modal-download" href="#" download target="_blank" rel="noopener" class="btn btn-ghost btn-sm">⬇ Descargar</a>
+        <button class="btn btn-ghost btn-sm" onclick="AlumnoUnidades.closePdf()">✕</button>
+      </div>
+    </div>
+    <iframe id="pdf-modal-frame" src="" style="flex:1;width:100%;border:none;background:#fff"></iframe>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
      OVERLAY DE EXAMEN
 ════════════════════════════════════════════ -->
 <div id="exam-overlay">
@@ -117,6 +133,18 @@
 
 <script>
   if (!Auth.require('alumno')) throw new Error('no-auth');
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+    document.getElementById('pdf-modal-frame').src = '';
+  });
+  document.getElementById('pdf-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.classList.add('hidden');
+      document.getElementById('pdf-modal-frame').src = '';
+    }
+  });
 
   function showTab(nombre) {
     AlumnoState.seccion = nombre;

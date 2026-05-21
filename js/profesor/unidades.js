@@ -32,9 +32,14 @@ const ProfesorUnidades = {
           ${Array.isArray(u.topics) ? u.topics.slice(0,3).join(', ') + (u.topics.length > 3 ? '…' : '') : '—'}
         </td>
         <td>
+          ${u.pdf_url
+            ? `<a href="${u.pdf_url}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Ver PDF</a>`
+            : '<span style="color:var(--text-3);font-size:.8rem">Sin PDF</span>'}
+        </td>
+        <td>
           <div class="td-actions">
             <button class="btn btn-ghost btn-sm" onclick="ProfesorUnidades.openModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar</button>
-            <button class="btn btn-danger btn-sm" onclick="ProfesorUnidades.delete('${u.id}','${u.title.replace(/'/g, "\\'")}')">Eliminar</button>
+            <button class="btn btn-danger btn-sm" onclick="ProfesorUnidades.delete('${u.id}','${u.title.replace(/'/g, "\\'")}','${u.pdf_url || ''}')">Eliminar</button>
           </div>
         </td>
       </tr>`).join('');
@@ -43,7 +48,7 @@ const ProfesorUnidades = {
       <div class="page-header"><h3>Unidades</h3>${addBtn}</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Título</th><th>Etiqueta</th><th>Temas</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>#</th><th>Título</th><th>Etiqueta</th><th>Temas</th><th>PDF</th><th>Acciones</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -57,7 +62,18 @@ const ProfesorUnidades = {
     document.getElementById('uni-modal-tag').value     = item?.tag      || '';
     document.getElementById('uni-modal-topics').value  = Array.isArray(item?.topics) ? item.topics.join('\n') : '';
     document.getElementById('uni-modal-content').value = item?.content  || '';
-    document.getElementById('uni-modal-pdf').value     = item?.pdf_url  || '';
+    document.getElementById('uni-modal-pdf-file').value = '';
+
+    // Mostrar PDF actual si existe
+    const pdfActual = document.getElementById('uni-pdf-actual');
+    if (item?.pdf_url) {
+      pdfActual.style.display = 'flex';
+      document.getElementById('uni-pdf-nombre').textContent = this._nombreArchivo(item.pdf_url);
+      document.getElementById('uni-pdf-link').href = item.pdf_url;
+    } else {
+      pdfActual.style.display = 'none';
+    }
+
     document.getElementById('uni-modal').classList.remove('hidden');
     document.getElementById('uni-modal-titulo').focus();
   },
@@ -75,19 +91,41 @@ const ProfesorUnidades = {
     const topics = document.getElementById('uni-modal-topics').value
       .split('\n').map(t => t.trim()).filter(Boolean);
     const content = document.getElementById('uni-modal-content').value.trim();
-    const pdf_url = document.getElementById('uni-modal-pdf').value.trim();
+    const fileInput = document.getElementById('uni-modal-pdf-file');
+    const file = fileInput.files[0];
 
     if (!title || !num) { Utils.toast('Número y título son obligatorios', 'error'); return; }
 
+    Utils.btnLoading(btn, true);
+
+    // Subir PDF si se seleccionó uno
+    let pdf_url = null;
+    if (file) {
+      const ext  = file.name.split('.').pop();
+      const path = `${ProfesorState.materia.id}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await sb.storage
+        .from('materiales')
+        .upload(path, file, { contentType: file.type, upsert: true });
+
+      if (uploadError) {
+        Utils.btnLoading(btn, false);
+        Utils.toast('Error al subir el PDF: ' + uploadError.message, 'error');
+        return;
+      }
+      const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
+      pdf_url = publicUrl;
+    }
+
     const payload = {
-      unit_num: num, title, tag: tag || null, topics, content: content || null,
-      pdf_url: pdf_url || null, subject_id: ProfesorState.materia.id, updated_at: new Date().toISOString(),
+      unit_num: num, title, tag: tag || null, topics,
+      content: content || null, subject_id: ProfesorState.materia.id,
+      updated_at: new Date().toISOString(),
+      ...(pdf_url ? { pdf_url } : {}),  // solo actualiza si subió archivo nuevo
     };
 
-    Utils.btnLoading(btn, true);
     const { error } = id
       ? await sb.from('units').update(payload).eq('id', id)
-      : await sb.from('units').insert(payload);
+      : await sb.from('units').insert({ ...payload, pdf_url });
     Utils.btnLoading(btn, false);
 
     if (error) { Utils.toast('Error al guardar: ' + error.message, 'error'); return; }
@@ -96,11 +134,30 @@ const ProfesorUnidades = {
     this.init();
   },
 
-  async delete(id, title) {
+  async delete(id, title, pdfUrl) {
     if (!await Utils.confirmar(`¿Eliminar la unidad "${title}"?`)) return;
+
+    // Eliminar archivo de Storage si existe
+    if (pdfUrl) {
+      const path = this._pathDesdeUrl(pdfUrl);
+      if (path) await sb.storage.from('materiales').remove([path]);
+    }
+
     const { error } = await sb.from('units').delete().eq('id', id);
     if (error) { Utils.toast('Error al eliminar: ' + error.message, 'error'); return; }
     Utils.toast('Unidad eliminada');
     this.init();
+  },
+
+  _nombreArchivo(url) {
+    try { return decodeURIComponent(url.split('/').pop().split('?')[0]); }
+    catch { return 'archivo.pdf'; }
+  },
+
+  _pathDesdeUrl(url) {
+    try {
+      const match = url.match(/\/materiales\/(.+)/);
+      return match ? match[1] : null;
+    } catch { return null; }
   },
 };

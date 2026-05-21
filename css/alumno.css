@@ -97,6 +97,8 @@
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
   transition: background 0.15s;
 }
 .pdf-link:hover { background: rgba(99,102,241,0.2); }

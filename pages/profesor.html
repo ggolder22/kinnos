@@ -145,8 +145,15 @@
       <textarea id="uni-modal-content" rows="4" placeholder="Texto de la unidad…"></textarea>
     </div>
     <div class="form-group">
-      <label>URL del PDF</label>
-      <input type="url" id="uni-modal-pdf" placeholder="https://…">
+      <label>PDF de la unidad</label>
+      <div id="uni-pdf-actual" style="display:none;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <span style="color:var(--text-3)">Actual:</span>
+        <a id="uni-pdf-link" href="#" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <span id="uni-pdf-nombre"></span>
+        </a>
+      </div>
+      <input type="file" id="uni-modal-pdf-file" accept=".pdf,application/pdf" style="font-size:.85rem">
+      <small style="color:var(--text-3)">Subir un nuevo PDF reemplaza el anterior.</small>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="ProfesorUnidades.closeModal()">Cancelar</button>

@@ -29,7 +29,7 @@ const AlumnoUnidades = {
       const content = u.content
         ? `<div class="unidad-content-text">${this._escapeHtml(u.content)}</div>` : '';
       const pdf = u.pdf_url
-        ? `<a class="pdf-link" href="${u.pdf_url}" target="_blank" rel="noopener">📄 Descargar PDF</a>` : '';
+        ? `<button class="pdf-link" onclick="AlumnoUnidades.openPdf(${JSON.stringify(u.pdf_url).replace(/"/g,'&quot;')},${JSON.stringify(u.title).replace(/"/g,'&quot;')})">📄 Ver PDF</button>` : '';
       const meta = [u.tag, u.year ? `Año ${u.year}` : null].filter(Boolean).join(' · ');
 
       return `
@@ -56,6 +56,18 @@ const AlumnoUnidades = {
 
   toggle(id) {
     document.getElementById(`uni-card-${id}`).classList.toggle('open');
+  },
+
+  openPdf(url, titulo) {
+    document.getElementById('pdf-modal-titulo').textContent = titulo;
+    document.getElementById('pdf-modal-frame').src = url;
+    document.getElementById('pdf-modal-download').href = url;
+    document.getElementById('pdf-modal').classList.remove('hidden');
+  },
+
+  closePdf() {
+    document.getElementById('pdf-modal').classList.add('hidden');
+    document.getElementById('pdf-modal-frame').src = '';
   },
 
   _escapeHtml(str) {
