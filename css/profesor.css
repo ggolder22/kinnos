@@ -1,25 +1,28 @@
 /* ── Tabs bar ── */
 .tabs-bar {
   display: flex;
-  gap: 4px;
-  padding: 8px 32px;
+  gap: 0;
+  padding: 0 32px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-card);
 }
 .tabs-bar.hidden { display: none; }
 
 .tab {
-  padding: 7px 18px;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  padding: 14px 22px;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: var(--text-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s;
   user-select: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
-.tab:hover  { background: var(--bg-hover); color: var(--text-1); }
-.tab.active { background: rgba(99,102,241,0.15); color: var(--accent); font-weight: 600; }
+.tab:hover  { color: var(--text-1); }
+.tab.active { color: var(--text-1); font-weight: 600; border-bottom-color: var(--accent); }
 
 /* ── Topbar materia info ── */
 .topbar-sub {
