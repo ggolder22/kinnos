@@ -51,3 +51,7 @@ CREATE POLICY "anon_delete" ON exams FOR DELETE USING (true);
 CREATE POLICY "anon_write" ON announcements FOR INSERT WITH CHECK (true);
 CREATE POLICY "anon_update" ON announcements FOR UPDATE USING (true);
 CREATE POLICY "anon_delete" ON announcements FOR DELETE USING (true);
+
+-- Resultados de exámenes (alumnos)
+CREATE POLICY "anon_write" ON exam_results FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON exam_results FOR UPDATE USING (true);

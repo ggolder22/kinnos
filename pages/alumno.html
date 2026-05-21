@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Alumno</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/alumno.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Kin<span>nos</span></h1>
+      <small>Alumno</small>
+    </div>
+    <nav>
+      <!-- Unirse a materia -->
+      <div class="join-form">
+        <input type="text" id="join-code-input" placeholder="Código de materia" maxlength="10"
+          onkeydown="if(event.key==='Enter') AlumnoMaterias.unirse()">
+        <button class="btn btn-primary" style="width:100%;padding:7px" onclick="AlumnoMaterias.unirse()">
+          Unirme a materia
+        </button>
+      </div>
+      <div class="nav-section">Mis Materias</div>
+      <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h2 id="topbar-materia">Seleccioná una materia</h2>
+        <div id="topbar-sub" class="topbar-sub"></div>
+      </div>
+      <div class="topbar-right">
+        <span id="alumno-greeting"></span>
+      </div>
+    </div>
+
+    <div class="tabs-bar hidden" id="tabs-bar">
+      <div class="tab" data-tab="unidades"  onclick="showTab('unidades')">📚 Unidades</div>
+      <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">📝 Exámenes</div>
+      <div class="tab" data-tab="novedades" onclick="showTab('novedades')">📢 Novedades</div>
+    </div>
+
+    <!-- Bienvenida -->
+    <div class="page active" id="page-bienvenida">
+      <div class="empty-state" style="margin-top:80px">
+        <div class="icon">👈</div>
+        <p>Seleccioná una materia o ingresá un código para unirte.</p>
+      </div>
+    </div>
+
+    <div class="page" id="page-unidades">
+      <div id="unidades-content"></div>
+    </div>
+
+    <div class="page" id="page-examenes">
+      <div id="examenes-content"></div>
+    </div>
+
+    <div class="page" id="page-novedades">
+      <div id="novedades-content"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── Toast ── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     OVERLAY DE EXAMEN
+════════════════════════════════════════════ -->
+<div id="exam-overlay">
+  <div class="exam-overlay-header">
+    <h2 id="exam-overlay-titulo"></h2>
+    <button class="btn btn-ghost btn-sm" onclick="AlumnoExamenes.cerrarOverlay()">✕ Salir</button>
+  </div>
+
+  <div class="exam-body">
+    <div id="exam-form-view">
+      <p id="exam-instrucciones" style="color:var(--text-2);font-size:.9rem;margin-bottom:24px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px"></p>
+      <div id="exam-preguntas"></div>
+      <div style="text-align:center;margin-top:24px">
+        <button class="btn btn-primary" style="min-width:200px" onclick="AlumnoExamenes.enviar()">
+          Entregar examen
+        </button>
+      </div>
+    </div>
+    <div id="exam-result-view" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../config.js"></script>
+<script src="../js/sb.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/alumno/materias.js"></script>
+<script src="../js/alumno/unidades.js"></script>
+<script src="../js/alumno/novedades.js"></script>
+<script src="../js/alumno/examenes.js"></script>
+
+<script>
+  if (!Auth.require('alumno')) throw new Error('no-auth');
+
+  function showTab(nombre) {
+    AlumnoState.seccion = nombre;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nombre));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${nombre}`).classList.add('active');
+    const modulos = { unidades: AlumnoUnidades, examenes: AlumnoExamenes, novedades: AlumnoNovedades };
+    modulos[nombre]?.init();
+  }
+
+  AlumnoMaterias.init();
+</script>
+
+</body>
+</html>
