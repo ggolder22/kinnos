@@ -54,13 +54,25 @@ const ProfesorUnidades = {
       </div>`;
   },
 
-  openModal(item = null) {
+  async openModal(item = null) {
     document.getElementById('uni-modal-title').textContent = item ? 'Editar unidad' : 'Nueva unidad';
-    document.getElementById('uni-modal-id').value      = item?.id       || '';
-    document.getElementById('uni-modal-num').value     = item?.unit_num || '';
-    document.getElementById('uni-modal-titulo').value  = item?.title    || '';
-    document.getElementById('uni-modal-tag').value     = item?.tag      || '';
+    document.getElementById('uni-modal-id').value      = item?.id    || '';
+    document.getElementById('uni-modal-titulo').value  = item?.title || '';
     document.getElementById('uni-modal-topics').value  = Array.isArray(item?.topics) ? item.topics.join('\n') : '';
+
+    // Auto-incrementar número si es nueva unidad
+    if (item) {
+      document.getElementById('uni-modal-num').value = item.unit_num;
+    } else {
+      const { count } = await sb.from('units')
+        .select('*', { count: 'exact', head: true })
+        .eq('subject_id', ProfesorState.materia.id);
+      document.getElementById('uni-modal-num').value = (count || 0) + 1;
+    }
+
+    // Etiqueta: select con opción guardada pre-seleccionada
+    const tagSel = document.getElementById('uni-modal-tag');
+    tagSel.value = item?.tag || '';
     document.getElementById('uni-modal-content').value = item?.content  || '';
     document.getElementById('uni-modal-pdf-file').value = '';
 
