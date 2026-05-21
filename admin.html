@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Admin</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Kin<span>nos</span></h1>
+      <small>Super Admin</small>
+    </div>
+    <nav>
+      <div class="nav-section">Gestión</div>
+      <div class="nav-item active" id="nav-inst" onclick="showPage('instituciones')">
+        <span class="icon">🏫</span> Instituciones
+      </div>
+      <div class="nav-item" id="nav-prof" onclick="showPage('profesores')">
+        <span class="icon">👨‍🏫</span> Profesores
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="topbar-title">Instituciones</h2>
+      <div class="topbar-right">
+        <span id="admin-greeting"></span>
+      </div>
+    </div>
+
+    <!-- Página: Instituciones / Carreras / Materias (drill-down) -->
+    <div class="page active" id="page-instituciones">
+      <div class="breadcrumb" id="inst-breadcrumb"></div>
+      <div id="inst-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <!-- Página: Profesores -->
+    <div class="page" id="page-profesores">
+      <div id="prof-content"><div class="loading">Cargando…</div></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── Toast ── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     MODALES
+════════════════════════════════════════════ -->
+
+<!-- Modal: Institución -->
+<div class="modal-backdrop hidden" id="inst-modal">
+  <div class="modal">
+    <h4 id="inst-modal-title">Nueva institución</h4>
+    <input type="hidden" id="inst-modal-id">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input type="text" id="inst-modal-name" placeholder="Ej: Instituto Politécnico San Martín">
+    </div>
+    <div class="form-group">
+      <label>Dirección</label>
+      <input type="text" id="inst-modal-addr" placeholder="Ej: Av. Córdoba 1234, Mendoza">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminInstitutions.closeInstModal()">Cancelar</button>
+      <button class="btn btn-primary" id="inst-modal-save" onclick="AdminInstitutions.saveInst()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Carrera -->
+<div class="modal-backdrop hidden" id="carrera-modal">
+  <div class="modal">
+    <h4 id="carrera-modal-title">Nueva carrera</h4>
+    <input type="hidden" id="carrera-modal-id">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input type="text" id="carrera-modal-name" placeholder="Ej: Técnico en Electrotecnia">
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="carrera-modal-desc" placeholder="Descripción opcional…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminInstitutions.closeCarreraModal()">Cancelar</button>
+      <button class="btn btn-primary" id="carrera-modal-save" onclick="AdminInstitutions.saveCarrera()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Materia -->
+<div class="modal-backdrop hidden" id="materia-modal">
+  <div class="modal">
+    <h4 id="materia-modal-title">Nueva materia</h4>
+    <input type="hidden" id="materia-modal-id">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input type="text" id="materia-modal-name" placeholder="Ej: Electrónica Aplicada">
+    </div>
+    <div class="form-group">
+      <label>Año del plan</label>
+      <input type="number" id="materia-modal-year" placeholder="Ej: 3" min="1" max="6">
+    </div>
+    <p style="font-size:.8rem;color:var(--text-3);margin-top:-8px">
+      El código de inscripción se genera automáticamente.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminInstitutions.closeMateriaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="materia-modal-save" onclick="AdminInstitutions.saveMateria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Profesor -->
+<div class="modal-backdrop hidden" id="prof-modal">
+  <div class="modal">
+    <h4 id="prof-modal-title">Nuevo profesor</h4>
+    <input type="hidden" id="prof-modal-id">
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input type="text" id="prof-modal-name" placeholder="Ej: María González">
+    </div>
+    <div class="form-group">
+      <label>DNI *</label>
+      <input type="text" id="prof-modal-dni" placeholder="Ej: 28450123" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="prof-modal-email" placeholder="Ej: maria@escuela.edu.ar">
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input type="text" id="prof-modal-phone" placeholder="Ej: 2604 123456">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminProfessors.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="prof-modal-save" onclick="AdminProfessors.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Asignar materias a profesor -->
+<div class="modal-backdrop hidden" id="asign-modal">
+  <div class="modal" style="max-width:560px">
+    <h4 id="asign-modal-title">Materias del profesor</h4>
+    <div id="asign-list" style="max-height:360px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminProfessors.closeAsignModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/sb.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/admin/institutions.js"></script>
+<script src="js/admin/professors.js"></script>
+
+<script>
+  // Verificar sesión y arrancar
+  if (!Auth.require('admin')) throw new Error('no-auth');
+
+  const session = Auth.session();
+  document.getElementById('admin-greeting').textContent = `DNI ${session.dni}`;
+
+  // Cerrar modales con Escape
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+  });
+
+  // Cerrar modal al clickear el backdrop
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', e => {
+      if (e.target === backdrop) backdrop.classList.add('hidden');
+    });
+  });
+
+  function showPage(nombre) {
+    // Nav items
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`nav-${nombre === 'instituciones' ? 'inst' : 'prof'}`).classList.add('active');
+
+    // Pages
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${nombre}`).classList.add('active');
+
+    // Topbar
+    const titles = { instituciones: 'Instituciones', profesores: 'Profesores' };
+    document.getElementById('topbar-title').textContent = titles[nombre];
+
+    // Init módulo
+    if (nombre === 'instituciones') AdminInstitutions.init();
+    if (nombre === 'profesores')    AdminProfessors.init();
+  }
+
+  // Arrancar con instituciones
+  showPage('instituciones');
+</script>
+
+</body>
+</html>
