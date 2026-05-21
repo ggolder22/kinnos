@@ -20,6 +20,9 @@
   <button id="btn-ingresar" onclick="login()">Ingresar</button>
   <div class="spinner" id="spinner"></div>
   <div class="error" id="error-msg"></div>
+  <a href="registro-profesor.html" style="display:block;text-align:center;margin-top:20px;color:#64748b;font-size:.85rem;text-decoration:none">
+    ¿Sos profesor? Registrate aquí
+  </a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -60,11 +63,19 @@
       // 2. Profesor
       const { data: prof } = await sb
         .from('professors')
-        .select('id, full_name, dni')
+        .select('id, full_name, dni, status')
         .eq('dni', dni)
         .maybeSingle();
 
       if (prof) {
+        if (prof.status === 'pending') {
+          mostrarError('Tu solicitud está pendiente de aprobación. Te avisaremos cuando esté lista.');
+          return;
+        }
+        if (prof.status === 'rejected') {
+          mostrarError('Tu solicitud fue rechazada. Contactá al administrador.');
+          return;
+        }
         sessionStorage.setItem('kinnos_rol', 'profesor');
         sessionStorage.setItem('kinnos_dni', dni);
         sessionStorage.setItem('kinnos_id', prof.id);

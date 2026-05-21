@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Registro de Profesor</title>
+  <style>
+    :root {
+      --bg-base: #0f172a; --bg-card: #1e293b; --border: #334155;
+      --text-1: #f8fafc; --text-2: #94a3b8; --text-3: #64748b;
+      --accent: #6366f1; --accent-h: #4f46e5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-base);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 24px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-1); letter-spacing: -1px; }
+    .logo h1 span { color: var(--accent); }
+    .logo p { color: var(--text-3); font-size: 0.875rem; margin-top: 4px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; color: var(--text-2); font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%; padding: 10px 14px;
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-1); font-size: 0.9rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: var(--accent); }
+    .form-group select option { background: var(--bg-card); }
+    .form-group input::placeholder { color: #475569; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    button {
+      width: 100%; margin-top: 20px; padding: 13px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover:not(:disabled) { background: var(--accent-h); }
+    button:active { transform: scale(0.98); }
+    button:disabled { background: #334155; cursor: not-allowed; }
+
+    .error, .success {
+      margin-top: 16px; padding: 12px 16px;
+      border-radius: 8px; font-size: 0.875rem; display: none;
+    }
+    .error   { background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; }
+    .success { background: #14532d; border: 1px solid #166534; color: #86efac; }
+
+    .back-link {
+      display: block; text-align: center; margin-top: 20px;
+      color: var(--text-3); font-size: 0.85rem; text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <h1>Kin<span>nos</span></h1>
+    <p>Registro de Profesor</p>
+  </div>
+
+  <div id="form-container">
+    <div class="grid-2">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nombre completo *</label>
+        <input type="text" id="reg-nombre" placeholder="Ej: María González">
+      </div>
+      <div class="form-group">
+        <label>DNI *</label>
+        <input type="text" id="reg-dni" placeholder="Ej: 28450123" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="text" id="reg-telefono" placeholder="Ej: 2604 123456">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="Ej: maria@escuela.edu.ar">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Institución donde dictás clases *</label>
+        <select id="reg-institucion">
+          <option value="">Cargando instituciones…</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btn-registrar" onclick="registrar()">Enviar solicitud</button>
+    <div class="error" id="error-msg"></div>
+  </div>
+
+  <!-- Estado: solicitud enviada -->
+  <div id="exito-container" style="display:none;text-align:center;padding:16px 0">
+    <div style="font-size:2.5rem;margin-bottom:16px">✅</div>
+    <p style="color:var(--text-1);font-weight:600;font-size:1.05rem;margin-bottom:8px">¡Solicitud enviada!</p>
+    <p style="color:var(--text-3);font-size:.875rem">
+      Tu solicitud fue recibida. El administrador la revisará y recibirás acceso una vez aprobada.
+    </p>
+  </div>
+
+  <a class="back-link" href="index.html">← Volver al inicio de sesión</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/sb.js"></script>
+<script>
+  // Cargar instituciones en el select
+  async function cargarInstituciones() {
+    const { data } = await sb.from('institutions').select('id, name').order('name');
+    const sel = document.getElementById('reg-institucion');
+    if (!data?.length) {
+      sel.innerHTML = '<option value="">No hay instituciones cargadas</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Seleccioná tu institución…</option>' +
+      data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  }
+
+  async function registrar() {
+    const btn    = document.getElementById('btn-registrar');
+    const errEl  = document.getElementById('error-msg');
+    errEl.style.display = 'none';
+
+    const nombre   = document.getElementById('reg-nombre').value.trim();
+    const dni      = document.getElementById('reg-dni').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const telefono = document.getElementById('reg-telefono').value.trim();
+    const instId   = document.getElementById('reg-institucion').value;
+
+    if (!nombre) { mostrarError('El nombre es obligatorio.'); return; }
+    if (!dni)    { mostrarError('El DNI es obligatorio.'); return; }
+    if (!instId) { mostrarError('Seleccioná tu institución.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    // Verificar si el DNI ya existe
+    const { data: existe } = await sb.from('professors').select('status').eq('dni', dni).maybeSingle();
+    if (existe) {
+      const msgs = {
+        active:  'Ese DNI ya tiene acceso. Podés iniciar sesión directamente.',
+        pending: 'Ya existe una solicitud pendiente con ese DNI.',
+        rejected: 'Esa solicitud fue rechazada. Contactá al administrador.',
+      };
+      mostrarError(msgs[existe.status] || 'Ese DNI ya está registrado.');
+      btn.disabled = false;
+      btn.textContent = 'Enviar solicitud';
+      return;
+    }
+
+    const { error } = await sb.from('professors').insert({
+      full_name: nombre, dni, email: email || null,
+      phone: telefono || null, institution_id: instId, status: 'pending',
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Enviar solicitud';
+
+    if (error) { mostrarError('Error al enviar: ' + error.message); return; }
+
+    document.getElementById('form-container').style.display = 'none';
+    document.getElementById('exito-container').style.display = 'block';
+  }
+
+  function mostrarError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  cargarInstituciones();
+</script>
+
+</body>
+</html>
