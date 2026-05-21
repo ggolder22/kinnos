@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Profesor</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/profesor.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Kin<span>nos</span></h1>
+      <small>Profesor</small>
+    </div>
+    <nav>
+      <div class="nav-section">Mis Materias</div>
+      <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h2 id="topbar-materia">Seleccioná una materia</h2>
+        <div id="topbar-sub" class="topbar-sub"></div>
+      </div>
+      <div class="topbar-right">
+        <span id="prof-greeting"></span>
+      </div>
+    </div>
+
+    <div class="tabs-bar hidden" id="tabs-bar">
+      <div class="tab" data-tab="unidades"  onclick="showTab('unidades')">📚 Unidades</div>
+      <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">👥 Alumnos</div>
+      <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">📝 Exámenes</div>
+      <div class="tab" data-tab="novedades" onclick="showTab('novedades')">📢 Novedades</div>
+    </div>
+
+    <!-- Bienvenida (sin materia seleccionada) -->
+    <div class="page active" id="page-bienvenida">
+      <div class="empty-state" style="margin-top:80px">
+        <div class="icon">👈</div>
+        <p>Seleccioná una materia del menú para comenzar.</p>
+      </div>
+    </div>
+
+    <div class="page" id="page-unidades">
+      <div id="unidades-content"></div>
+    </div>
+
+    <div class="page" id="page-alumnos">
+      <div id="alumnos-content"></div>
+    </div>
+
+    <div class="page" id="page-examenes">
+      <div id="examenes-content"></div>
+    </div>
+
+    <div class="page" id="page-novedades">
+      <div id="novedades-content"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── Toast ── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     MODALES
+════════════════════════════════════════════ -->
+
+<!-- Modal: Unidad -->
+<div class="modal-backdrop hidden" id="uni-modal">
+  <div class="modal" style="max-width:520px">
+    <h4 id="uni-modal-title">Nueva unidad</h4>
+    <input type="hidden" id="uni-modal-id">
+    <div style="display:grid;grid-template-columns:80px 1fr;gap:12px">
+      <div class="form-group">
+        <label>Nro *</label>
+        <input type="number" id="uni-modal-num" placeholder="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="uni-modal-titulo" placeholder="Ej: Fundamentos de circuitos">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Etiqueta</label>
+      <input type="text" id="uni-modal-tag" placeholder="Ej: Teórica, Laboratorio…">
+    </div>
+    <div class="form-group">
+      <label>Temas (uno por línea)</label>
+      <textarea id="uni-modal-topics" rows="3" placeholder="Ley de Ohm&#10;Circuitos en serie&#10;Circuitos en paralelo"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Contenido / Desarrollo</label>
+      <textarea id="uni-modal-content" rows="4" placeholder="Texto de la unidad…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>URL del PDF</label>
+      <input type="url" id="uni-modal-pdf" placeholder="https://…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorUnidades.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="uni-modal-save" onclick="ProfesorUnidades.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novedad -->
+<div class="modal-backdrop hidden" id="nov-modal">
+  <div class="modal">
+    <h4 id="nov-modal-title">Nueva novedad</h4>
+    <input type="hidden" id="nov-modal-id">
+    <div class="form-group">
+      <label>Título *</label>
+      <input type="text" id="nov-modal-titulo" placeholder="Ej: Cambio de fecha de examen">
+    </div>
+    <div class="form-group">
+      <label>Cuerpo</label>
+      <textarea id="nov-modal-body" rows="4" placeholder="Detalle de la novedad…"></textarea>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="nov-modal-pin" style="width:auto">
+      <label for="nov-modal-pin" style="text-transform:none;font-size:.875rem;cursor:pointer">📌 Fijar al inicio</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorNovedades.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="nov-modal-save" onclick="ProfesorNovedades.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Examen -->
+<div class="modal-backdrop hidden" id="exam-modal">
+  <div class="modal">
+    <h4 id="exam-modal-title">Nuevo examen</h4>
+    <input type="hidden" id="exam-modal-id">
+    <div class="form-group">
+      <label>Título *</label>
+      <input type="text" id="exam-modal-nombre" placeholder="Ej: Parcial 1 — Unidades 1 a 3">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="exam-modal-practica" style="width:auto" onchange="ProfesorExamenes._toggleTiempo()">
+      <label for="exam-modal-practica" style="text-transform:none;font-size:.875rem;cursor:pointer">
+        Es examen de práctica (sin nota, repetible)
+      </label>
+    </div>
+    <div id="exam-tiempo-row" class="form-group">
+      <label>Tiempo límite (minutos)</label>
+      <input type="number" id="exam-modal-tiempo" placeholder="Ej: 60" min="1">
+    </div>
+    <div class="form-group">
+      <label>Instrucciones para el alumno</label>
+      <textarea id="exam-modal-instruc" rows="3" placeholder="Leé cada pregunta con atención…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorExamenes.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="exam-modal-save" onclick="ProfesorExamenes.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/sb.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/profesor/materias.js"></script>
+<script src="js/profesor/unidades.js"></script>
+<script src="js/profesor/alumnos.js"></script>
+<script src="js/profesor/novedades.js"></script>
+<script src="js/profesor/examenes.js"></script>
+
+<script>
+  if (!Auth.require('profesor')) throw new Error('no-auth');
+
+  // Cerrar modales con Escape o click en backdrop
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(b => {
+    b.addEventListener('click', e => { if (e.target === b) b.classList.add('hidden'); });
+  });
+
+  function showTab(nombre) {
+    ProfesorState.seccion = nombre;
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === nombre);
+    });
+
+    // Pages
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${nombre}`).classList.add('active');
+
+    // Cargar contenido del tab
+    const modulos = {
+      unidades:  ProfesorUnidades,
+      alumnos:   ProfesorAlumnos,
+      examenes:  ProfesorExamenes,
+      novedades: ProfesorNovedades,
+    };
+    modulos[nombre]?.init();
+  }
+
+  // Arrancar
+  ProfesorMaterias.init();
+</script>
+
+</body>
+</html>

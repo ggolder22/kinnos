@@ -32,3 +32,22 @@ CREATE POLICY "anon_delete" ON professor_subjects FOR DELETE USING (true);
 CREATE POLICY "anon_write" ON students FOR INSERT WITH CHECK (true);
 CREATE POLICY "anon_update" ON students FOR UPDATE USING (true);
 CREATE POLICY "anon_delete" ON students FOR DELETE USING (true);
+
+-- Inscripción alumno ↔ materia (profesores la gestionan)
+CREATE POLICY "anon_write" ON student_subjects FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_delete" ON student_subjects FOR DELETE USING (true);
+
+-- Unidades (profesores)
+CREATE POLICY "anon_write" ON units FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON units FOR UPDATE USING (true);
+CREATE POLICY "anon_delete" ON units FOR DELETE USING (true);
+
+-- Exámenes (profesores)
+CREATE POLICY "anon_write" ON exams FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON exams FOR UPDATE USING (true);
+CREATE POLICY "anon_delete" ON exams FOR DELETE USING (true);
+
+-- Novedades (profesores)
+CREATE POLICY "anon_write" ON announcements FOR INSERT WITH CHECK (true);
+CREATE POLICY "anon_update" ON announcements FOR UPDATE USING (true);
+CREATE POLICY "anon_delete" ON announcements FOR DELETE USING (true);
