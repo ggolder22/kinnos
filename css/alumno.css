@@ -1,3 +1,84 @@
+/* ── Banner de novedades / bienvenida ── */
+#novedades-banner {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+#novedades-banner.hidden { display: none; }
+
+.nov-banner-header {
+  margin-bottom: 12px;
+}
+.nov-banner-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.nov-banner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nov-banner-item {
+  padding: 12px 16px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  border-left: 3px solid var(--border);
+}
+.nov-banner-item.pinned {
+  border-left-color: var(--accent);
+}
+.nov-banner-titulo {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.nov-banner-cuerpo {
+  font-size: 0.825rem;
+  color: var(--text-2);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.nov-banner-meta {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+
+/* ── Bienvenida card ── */
+.bienvenida-card {
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bienvenida-nombre {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.bienvenida-info {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
+}
+.bienvenida-frase {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.825rem;
+  color: var(--text-2);
+  font-style: italic;
+}
+
 /* ── Unirse a materia (sidebar) ── */
 .join-form {
   padding: 12px 16px;

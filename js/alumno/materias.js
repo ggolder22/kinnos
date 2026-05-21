@@ -56,6 +56,7 @@ const AlumnoMaterias = {
     document.getElementById('topbar-sub').textContent = sub;
 
     document.getElementById('tabs-bar').classList.remove('hidden');
+    AlumnoNovedades.renderBanner();
     showTab(AlumnoState.seccion || 'unidades');
   },
 
