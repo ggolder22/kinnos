@@ -19,6 +19,11 @@
       <small>Profesor</small>
     </div>
     <nav>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+        <button class="btn btn-primary" style="width:100%;padding:8px" onclick="ProfesorMaterias.abrirModalCrear()">
+          + Nueva materia
+        </button>
+      </div>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
     </nav>
@@ -79,6 +84,38 @@
 <!-- ════════════════════════════════════════════
      MODALES
 ════════════════════════════════════════════ -->
+
+<!-- Modal: Nueva materia -->
+<div class="modal-backdrop hidden" id="nueva-mat-modal">
+  <div class="modal">
+    <h4>Nueva materia</h4>
+    <div class="form-group">
+      <label>Institución *</label>
+      <select id="nueva-mat-inst" onchange="ProfesorMaterias.onInstChange()">
+        <option value="">Seleccioná institución…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Carrera *</label>
+      <select id="nueva-mat-carrera">
+        <option value="">Primero seleccioná institución</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Nombre de la materia *</label>
+      <input type="text" id="nueva-mat-nombre" placeholder="Ej: Electrónica Aplicada">
+    </div>
+    <div class="form-group">
+      <label>Año del plan</label>
+      <input type="number" id="nueva-mat-year" placeholder="Ej: 3" min="1" max="6">
+    </div>
+    <p style="font-size:.78rem;color:var(--text-3)">El código de inscripción se genera automáticamente.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorMaterias.cerrarModalCrear()">Cancelar</button>
+      <button class="btn btn-primary" id="nueva-mat-save" onclick="ProfesorMaterias.guardarNuevaMateria()">Crear materia</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Unidad -->
 <div class="modal-backdrop hidden" id="uni-modal">
