@@ -25,6 +25,9 @@
       <div class="nav-item" id="nav-prof" onclick="showPage('profesores')">
         <span class="icon">👨‍🏫</span> Profesores
       </div>
+      <div class="nav-item" id="nav-alumnos" onclick="showPage('alumnos')">
+        <span class="icon">👥</span> Alumnos
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
@@ -49,6 +52,11 @@
     <!-- Página: Profesores -->
     <div class="page" id="page-profesores">
       <div id="prof-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <!-- Página: Alumnos -->
+    <div class="page" id="page-alumnos">
+      <div id="alumnos-content"><div class="loading">Cargando…</div></div>
     </div>
   </div>
 
@@ -152,6 +160,40 @@
   </div>
 </div>
 
+<!-- Modal: Alumno -->
+<div class="modal-backdrop hidden" id="alumno-modal">
+  <div class="modal">
+    <h4 id="alumno-modal-title">Nuevo alumno</h4>
+    <input type="hidden" id="alumno-modal-id">
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input type="text" id="alumno-modal-name" placeholder="Ej: Juan Pérez">
+    </div>
+    <div class="form-group">
+      <label>DNI *</label>
+      <input type="text" id="alumno-modal-dni" placeholder="Ej: 40123456" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="alumno-modal-email" placeholder="Ej: juan@gmail.com">
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input type="text" id="alumno-modal-phone" placeholder="Ej: 2604 123456">
+    </div>
+    <div class="form-group">
+      <label>Institución</label>
+      <select id="alumno-modal-inst">
+        <option value="">Sin institución asignada</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminAlumnos.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="alumno-modal-save" onclick="AdminAlumnos.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Asignar materias a profesor -->
 <div class="modal-backdrop hidden" id="asign-modal">
   <div class="modal" style="max-width:560px">
@@ -173,6 +215,7 @@
 <script src="../js/utils.js"></script>
 <script src="../js/admin/institutions.js"></script>
 <script src="../js/admin/professors.js"></script>
+<script src="../js/admin/alumnos.js"></script>
 
 <script>
   if (!Auth.require('admin')) throw new Error('no-auth');
@@ -191,18 +234,21 @@
     });
   });
 
+  const navIds = { instituciones: 'inst', profesores: 'prof', alumnos: 'alumnos' };
+  const titles  = { instituciones: 'Instituciones', profesores: 'Profesores', alumnos: 'Alumnos' };
+
   function showPage(nombre) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`nav-${nombre === 'instituciones' ? 'inst' : 'prof'}`).classList.add('active');
+    document.getElementById(`nav-${navIds[nombre]}`).classList.add('active');
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${nombre}`).classList.add('active');
 
-    const titles = { instituciones: 'Instituciones', profesores: 'Profesores' };
     document.getElementById('topbar-title').textContent = titles[nombre];
 
     if (nombre === 'instituciones') AdminInstitutions.init();
     if (nombre === 'profesores')    AdminProfessors.init();
+    if (nombre === 'alumnos')       AdminAlumnos.init();
   }
 
   showPage('instituciones');
