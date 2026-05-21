@@ -59,6 +59,80 @@ const AlumnoMaterias = {
     showTab(AlumnoState.seccion || 'unidades');
   },
 
+  async explorar() {
+    const modal   = document.getElementById('explorar-modal');
+    const content = document.getElementById('explorar-content');
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="loading">Cargando…</div>';
+
+    const session = Auth.session();
+    const instId  = session.inst;
+
+    if (!instId) {
+      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">Tu cuenta no tiene institución asignada. Contactá al administrador.</p>';
+      return;
+    }
+
+    // Carreras de la institución
+    const { data: careers } = await sb.from('careers')
+      .select('id, name').eq('institution_id', instId).order('name');
+
+    if (!careers?.length) {
+      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay carreras cargadas en tu institución todavía.</p>';
+      return;
+    }
+
+    const careerIds = careers.map(c => c.id);
+
+    // Materias de esas carreras + inscripciones actuales
+    const [{ data: subjects }, { data: enrolled }] = await Promise.all([
+      sb.from('subjects').select('id, name, year, career_id').in('career_id', careerIds).order('name'),
+      sb.from('student_subjects').select('subject_id').eq('student_id', session.id),
+    ]);
+
+    if (!subjects?.length) {
+      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay materias disponibles todavía.</p>';
+      return;
+    }
+
+    const enrolledIds = new Set((enrolled || []).map(e => e.subject_id));
+    const careerMap   = Object.fromEntries(careers.map(c => [c.id, c.name]));
+
+    // Agrupar por carrera
+    const byCareer = {};
+    for (const s of subjects) {
+      const cn = careerMap[s.career_id] || 'Sin carrera';
+      (byCareer[cn] = byCareer[cn] || []).push(s);
+    }
+
+    content.innerHTML = Object.entries(byCareer).map(([carName, subs]) => `
+      <div style="margin-bottom:20px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">${carName}</div>
+        ${subs.map(s => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+            <div>
+              <div style="font-weight:500;color:var(--text-1);font-size:.875rem">${s.name}</div>
+              ${s.year ? `<div style="font-size:.75rem;color:var(--text-3)">Año ${s.year}</div>` : ''}
+            </div>
+            ${enrolledIds.has(s.id)
+              ? '<span class="badge badge-indigo" style="background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.3)">Inscripto</span>'
+              : `<button class="btn btn-primary btn-sm" onclick="AlumnoMaterias.inscribirse('${s.id}',${JSON.stringify(s.name).replace(/"/g,'&quot;')})">Inscribirme</button>`
+            }
+          </div>`).join('')}
+      </div>`).join('');
+  },
+
+  async inscribirse(subjectId, nombre) {
+    const session = Auth.session();
+    const { error } = await sb.from('student_subjects')
+      .insert({ student_id: session.id, subject_id: subjectId });
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast(`¡Inscripto en ${nombre}!`);
+    document.getElementById('explorar-modal').classList.add('hidden');
+    await this._loadMaterias();
+    this.seleccionar(subjectId);
+  },
+
   async unirse() {
     const input = document.getElementById('join-code-input');
     const codigo = input.value.trim().toUpperCase();

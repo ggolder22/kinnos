@@ -56,6 +56,12 @@
         <label>Email</label>
         <input type="email" id="reg-email" placeholder="Ej: juan@gmail.com">
       </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Institución *</label>
+        <select id="reg-inst">
+          <option value="">Cargando instituciones…</option>
+        </select>
+      </div>
     </div>
 
     <button id="btn-registrar" onclick="registrar()">Registrarme</button>
@@ -66,7 +72,7 @@
     <div style="font-size:2.5rem;margin-bottom:16px">✅</div>
     <p style="color:#f8fafc;font-weight:600;font-size:1.05rem;margin-bottom:8px">¡Registro exitoso!</p>
     <p style="color:#64748b;font-size:.875rem;margin-bottom:20px">
-      Ya podés ingresar con tu DNI y unirte a tus materias con el código que te dé tu profesor.
+      Ya podés ingresar con tu DNI y explorar las materias de tu institución.
     </p>
     <a href="index.html" style="display:inline-block;padding:10px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
       Ingresar ahora
@@ -80,18 +86,32 @@
 <script src="../config.js"></script>
 <script src="../js/sb.js"></script>
 <script>
+  // Cargar instituciones al iniciar
+  (async () => {
+    const { data: insts } = await sb.from('institutions').select('id, name').order('name');
+    const sel = document.getElementById('reg-inst');
+    if (!insts?.length) {
+      sel.innerHTML = '<option value="">Sin instituciones disponibles</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Seleccioná tu institución *</option>' +
+      insts.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  })();
+
   async function registrar() {
     const btn    = document.getElementById('btn-registrar');
     const errEl  = document.getElementById('error-msg');
     errEl.style.display = 'none';
 
-    const nombre   = document.getElementById('reg-nombre').value.trim();
-    const dni      = document.getElementById('reg-dni').value.trim();
-    const email    = document.getElementById('reg-email').value.trim();
-    const telefono = document.getElementById('reg-telefono').value.trim();
+    const nombre      = document.getElementById('reg-nombre').value.trim();
+    const dni         = document.getElementById('reg-dni').value.trim();
+    const email       = document.getElementById('reg-email').value.trim();
+    const telefono    = document.getElementById('reg-telefono').value.trim();
+    const instId      = document.getElementById('reg-inst').value;
 
     if (!nombre) { mostrarError('El nombre es obligatorio.'); return; }
     if (!dni)    { mostrarError('El DNI es obligatorio.'); return; }
+    if (!instId) { mostrarError('Seleccioná tu institución.'); return; }
 
     btn.disabled = true;
     btn.textContent = 'Registrando…';
@@ -105,6 +125,7 @@
 
     const { error } = await sb.from('students').insert({
       full_name: nombre, dni, email: email || null, phone: telefono || null,
+      institution_id: instId,
     });
 
     btn.disabled = false;

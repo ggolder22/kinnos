@@ -19,12 +19,15 @@
       <small>Alumno</small>
     </div>
     <nav>
-      <!-- Unirse a materia -->
+      <!-- Unirse / Explorar materias -->
       <div class="join-form">
-        <input type="text" id="join-code-input" placeholder="Código de materia" maxlength="10"
+        <button class="btn btn-primary" style="width:100%;padding:8px;margin-bottom:8px" onclick="AlumnoMaterias.explorar()">
+          + Explorar materias
+        </button>
+        <input type="text" id="join-code-input" placeholder="Tengo un código…" maxlength="10"
           onkeydown="if(event.key==='Enter') AlumnoMaterias.unirse()">
-        <button class="btn btn-primary" style="width:100%;padding:7px" onclick="AlumnoMaterias.unirse()">
-          Unirme a materia
+        <button class="btn btn-ghost" style="width:100%;padding:7px;font-size:.8rem" onclick="AlumnoMaterias.unirse()">
+          Ingresar con código
         </button>
       </div>
       <div class="nav-section">Mis Materias</div>
@@ -78,6 +81,19 @@
 
 <!-- ── Toast ── -->
 <div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: Explorar materias
+════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="explorar-modal">
+  <div class="modal" style="max-width:580px">
+    <h4>Materias de mi institución</h4>
+    <div id="explorar-content" style="max-height:60vh;overflow-y:auto;margin-top:8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('explorar-modal').classList.add('hidden')">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ════════════════════════════════════════════
      MODAL: Visor PDF
@@ -137,7 +153,12 @@
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
-    document.getElementById('pdf-modal-frame').src = '';
+    if (!document.getElementById('pdf-modal').classList.contains('hidden')) {
+      document.getElementById('pdf-modal-frame').src = '';
+    }
+  });
+  document.getElementById('explorar-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
   });
   document.getElementById('pdf-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) {
