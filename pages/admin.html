@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Admin</title>
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
 </head>
 <body>
 
@@ -167,27 +167,24 @@
      SCRIPTS
 ════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="js/sb.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/admin/institutions.js"></script>
-<script src="js/admin/professors.js"></script>
+<script src="../config.js"></script>
+<script src="../js/sb.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/admin/institutions.js"></script>
+<script src="../js/admin/professors.js"></script>
 
 <script>
-  // Verificar sesión y arrancar
   if (!Auth.require('admin')) throw new Error('no-auth');
 
   const session = Auth.session();
   document.getElementById('admin-greeting').textContent = `DNI ${session.dni}`;
 
-  // Cerrar modales con Escape
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
   });
 
-  // Cerrar modal al clickear el backdrop
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
     backdrop.addEventListener('click', e => {
       if (e.target === backdrop) backdrop.classList.add('hidden');
@@ -195,24 +192,19 @@
   });
 
   function showPage(nombre) {
-    // Nav items
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`nav-${nombre === 'instituciones' ? 'inst' : 'prof'}`).classList.add('active');
 
-    // Pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${nombre}`).classList.add('active');
 
-    // Topbar
     const titles = { instituciones: 'Instituciones', profesores: 'Profesores' };
     document.getElementById('topbar-title').textContent = titles[nombre];
 
-    // Init módulo
     if (nombre === 'instituciones') AdminInstitutions.init();
     if (nombre === 'profesores')    AdminProfessors.init();
   }
 
-  // Arrancar con instituciones
   showPage('instituciones');
 </script>
 

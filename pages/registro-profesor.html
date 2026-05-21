@@ -61,13 +61,11 @@
     button:active { transform: scale(0.98); }
     button:disabled { background: #334155; cursor: not-allowed; }
 
-    .error, .success {
+    .error {
       margin-top: 16px; padding: 12px 16px;
       border-radius: 8px; font-size: 0.875rem; display: none;
+      background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5;
     }
-    .error   { background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; }
-    .success { background: #14532d; border: 1px solid #166534; color: #86efac; }
-
     .back-link {
       display: block; text-align: center; margin-top: 20px;
       color: var(--text-3); font-size: 0.85rem; text-decoration: none;
@@ -126,10 +124,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="js/sb.js"></script>
+<script src="../config.js"></script>
+<script src="../js/sb.js"></script>
 <script>
-  // Cargar instituciones en el select
   async function cargarInstituciones() {
     const { data } = await sb.from('institutions').select('id, name').order('name');
     const sel = document.getElementById('reg-institucion');
@@ -159,12 +156,11 @@
     btn.disabled = true;
     btn.textContent = 'Enviando…';
 
-    // Verificar si el DNI ya existe
     const { data: existe } = await sb.from('professors').select('status').eq('dni', dni).maybeSingle();
     if (existe) {
       const msgs = {
-        active:  'Ese DNI ya tiene acceso. Podés iniciar sesión directamente.',
-        pending: 'Ya existe una solicitud pendiente con ese DNI.',
+        active:   'Ese DNI ya tiene acceso. Podés iniciar sesión directamente.',
+        pending:  'Ya existe una solicitud pendiente con ese DNI.',
         rejected: 'Esa solicitud fue rechazada. Contactá al administrador.',
       };
       mostrarError(msgs[existe.status] || 'Ese DNI ya está registrado.');

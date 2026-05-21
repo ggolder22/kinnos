@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Profesor</title>
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/profesor.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/profesor.css">
 </head>
 <body>
 
@@ -176,20 +176,19 @@
      SCRIPTS
 ════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="js/sb.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/profesor/materias.js"></script>
-<script src="js/profesor/unidades.js"></script>
-<script src="js/profesor/alumnos.js"></script>
-<script src="js/profesor/novedades.js"></script>
-<script src="js/profesor/examenes.js"></script>
+<script src="../config.js"></script>
+<script src="../js/sb.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/profesor/materias.js"></script>
+<script src="../js/profesor/unidades.js"></script>
+<script src="../js/profesor/alumnos.js"></script>
+<script src="../js/profesor/novedades.js"></script>
+<script src="../js/profesor/examenes.js"></script>
 
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
 
-  // Cerrar modales con Escape o click en backdrop
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
@@ -201,16 +200,13 @@
   function showTab(nombre) {
     ProfesorState.seccion = nombre;
 
-    // Tabs
     document.querySelectorAll('.tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === nombre);
     });
 
-    // Pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${nombre}`).classList.add('active');
 
-    // Cargar contenido del tab
     const modulos = {
       unidades:  ProfesorUnidades,
       alumnos:   ProfesorAlumnos,
@@ -220,7 +216,6 @@
     modulos[nombre]?.init();
   }
 
-  // Arrancar
   ProfesorMaterias.init();
 </script>
 
