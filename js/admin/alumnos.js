@@ -70,20 +70,50 @@ const AdminAlumnos = {
   },
 
   async openModal(item = null) {
-    // Cargar instituciones al abrir
-    const { data: insts } = await sb.from('institutions').select('id, name').order('name');
-    const sel = document.getElementById('alumno-modal-inst');
-    sel.innerHTML = '<option value="">Sin institución asignada</option>' +
-      (insts || []).map(i => `<option value="${i.id}"${item?.institution_id === i.id ? ' selected' : ''}>${i.name}</option>`).join('');
-
     document.getElementById('alumno-modal-title').textContent = item ? 'Editar alumno' : 'Nuevo alumno';
     document.getElementById('alumno-modal-id').value    = item?.id        || '';
     document.getElementById('alumno-modal-name').value  = item?.full_name || '';
     document.getElementById('alumno-modal-dni').value   = item?.dni       || '';
     document.getElementById('alumno-modal-email').value = item?.email     || '';
     document.getElementById('alumno-modal-phone').value = item?.phone     || '';
+
+    // Cargar instituciones
+    const { data: insts } = await sb.from('institutions').select('id, name').order('name');
+    const selInst = document.getElementById('alumno-modal-inst');
+    selInst.innerHTML = '<option value="">Sin institución asignada</option>' +
+      (insts || []).map(i => `<option value="${i.id}"${item?.institution_id === i.id ? ' selected' : ''}>${i.name}</option>`).join('');
+
+    // Cargar carreras si ya tiene institución
+    if (item?.institution_id) {
+      await this.onInstChange(item.career_id);
+    } else {
+      document.getElementById('alumno-modal-carrera').innerHTML = '<option value="">Primero seleccioná institución</option>';
+      document.getElementById('alumno-modal-carrera').disabled = true;
+    }
+
     document.getElementById('alumno-modal').classList.remove('hidden');
     document.getElementById('alumno-modal-name').focus();
+  },
+
+  async onInstChange(preselect = null) {
+    const instId  = document.getElementById('alumno-modal-inst').value;
+    const selCar  = document.getElementById('alumno-modal-carrera');
+    if (!instId) {
+      selCar.innerHTML = '<option value="">Primero seleccioná institución</option>';
+      selCar.disabled = true;
+      return;
+    }
+    selCar.innerHTML = '<option value="">Cargando…</option>';
+    selCar.disabled = true;
+    const { data: carreras } = await sb.from('careers')
+      .select('id, name').eq('institution_id', instId).order('name');
+    if (!carreras?.length) {
+      selCar.innerHTML = '<option value="">Sin carreras</option>';
+      return;
+    }
+    selCar.innerHTML = '<option value="">Sin carrera asignada</option>' +
+      carreras.map(c => `<option value="${c.id}"${preselect === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+    selCar.disabled = false;
   },
 
   closeModal() {
@@ -97,12 +127,16 @@ const AdminAlumnos = {
     const dni    = document.getElementById('alumno-modal-dni').value.trim();
     const email  = document.getElementById('alumno-modal-email').value.trim();
     const phone  = document.getElementById('alumno-modal-phone').value.trim();
-    const instId = document.getElementById('alumno-modal-inst').value;
+    const instId    = document.getElementById('alumno-modal-inst').value;
+    const carreraId = document.getElementById('alumno-modal-carrera').value;
 
     if (!name || !dni) { Utils.toast('Nombre y DNI son obligatorios', 'error'); return; }
 
     Utils.btnLoading(btn, true);
-    const payload = { full_name: name, dni, email: email || null, phone: phone || null, institution_id: instId || null };
+    const payload = {
+      full_name: name, dni, email: email || null, phone: phone || null,
+      institution_id: instId || null, career_id: carreraId || null,
+    };
     let error;
     if (id) {
       ({ error } = await sb.from('students').update(payload).eq('id', id));

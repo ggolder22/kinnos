@@ -88,7 +88,7 @@
       // 3. Alumno
       const { data: alumno } = await sb
         .from('students')
-        .select('id, full_name, dni, institution_id')
+        .select('id, full_name, dni, institution_id, career_id')
         .eq('dni', dni)
         .maybeSingle();
 
@@ -98,6 +98,7 @@
         sessionStorage.setItem('kinnos_id', alumno.id);
         sessionStorage.setItem('kinnos_nombre', alumno.full_name);
         if (alumno.institution_id) sessionStorage.setItem('kinnos_inst', alumno.institution_id);
+        if (alumno.career_id)      sessionStorage.setItem('kinnos_career', alumno.career_id);
         window.location.href = 'alumno.html';
         return;
       }

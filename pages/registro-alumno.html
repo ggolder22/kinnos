@@ -58,8 +58,14 @@
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label>Institución *</label>
-        <select id="reg-inst">
+        <select id="reg-inst" onchange="onInstChange()">
           <option value="">Cargando instituciones…</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Carrera *</label>
+        <select id="reg-carrera" disabled>
+          <option value="">Primero seleccioná institución</option>
         </select>
       </div>
     </div>
@@ -98,6 +104,27 @@
       insts.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
   })();
 
+  async function onInstChange() {
+    const instId  = document.getElementById('reg-inst').value;
+    const selCar  = document.getElementById('reg-carrera');
+    if (!instId) {
+      selCar.innerHTML = '<option value="">Primero seleccioná institución</option>';
+      selCar.disabled = true;
+      return;
+    }
+    selCar.innerHTML = '<option value="">Cargando carreras…</option>';
+    selCar.disabled = true;
+    const { data: carreras } = await sb.from('careers')
+      .select('id, name').eq('institution_id', instId).order('name');
+    if (!carreras?.length) {
+      selCar.innerHTML = '<option value="">Sin carreras — contactá al administrador</option>';
+      return;
+    }
+    selCar.innerHTML = '<option value="">Seleccioná tu carrera *</option>' +
+      carreras.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    selCar.disabled = false;
+  }
+
   async function registrar() {
     const btn    = document.getElementById('btn-registrar');
     const errEl  = document.getElementById('error-msg');
@@ -108,10 +135,12 @@
     const email       = document.getElementById('reg-email').value.trim();
     const telefono    = document.getElementById('reg-telefono').value.trim();
     const instId      = document.getElementById('reg-inst').value;
+    const carreraId   = document.getElementById('reg-carrera').value;
 
-    if (!nombre) { mostrarError('El nombre es obligatorio.'); return; }
-    if (!dni)    { mostrarError('El DNI es obligatorio.'); return; }
-    if (!instId) { mostrarError('Seleccioná tu institución.'); return; }
+    if (!nombre)     { mostrarError('El nombre es obligatorio.'); return; }
+    if (!dni)        { mostrarError('El DNI es obligatorio.'); return; }
+    if (!instId)     { mostrarError('Seleccioná tu institución.'); return; }
+    if (!carreraId)  { mostrarError('Seleccioná tu carrera.'); return; }
 
     btn.disabled = true;
     btn.textContent = 'Registrando…';
@@ -125,7 +154,7 @@
 
     const { error } = await sb.from('students').insert({
       full_name: nombre, dni, email: email || null, phone: telefono || null,
-      institution_id: instId,
+      institution_id: instId, career_id: carreraId,
     });
 
     btn.disabled = false;

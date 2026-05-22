@@ -6,6 +6,7 @@ const Auth = {
       nombre: sessionStorage.getItem('kinnos_nombre'),
       dni:    sessionStorage.getItem('kinnos_dni'),
       inst:   sessionStorage.getItem('kinnos_inst'),
+      career: sessionStorage.getItem('kinnos_career'),
     };
   },
 

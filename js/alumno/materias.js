@@ -66,55 +66,65 @@ const AlumnoMaterias = {
     modal.classList.remove('hidden');
     content.innerHTML = '<div class="loading">Cargando…</div>';
 
-    const session = Auth.session();
-    const instId  = session.inst;
+    const session  = Auth.session();
+    const careerId = session.career;
+    const instId   = session.inst;
 
-    if (!instId) {
+    if (!instId && !careerId) {
       content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">Tu cuenta no tiene institución asignada. Contactá al administrador.</p>';
       return;
     }
 
-    // Carreras de la institución
-    const { data: careers } = await sb.from('careers')
-      .select('id, name').eq('institution_id', instId).order('name');
+    // Si tiene carrera, mostrar solo esa. Si no, mostrar todas las de la institución.
+    let careerIds, careerMap;
+    if (careerId) {
+      const { data: car } = await sb.from('careers').select('id, name').eq('id', careerId).single();
+      careerIds = car ? [car.id] : [];
+      careerMap = car ? { [car.id]: car.name } : {};
+    } else {
+      const { data: careers } = await sb.from('careers')
+        .select('id, name').eq('institution_id', instId).order('name');
+      careerIds = (careers || []).map(c => c.id);
+      careerMap = Object.fromEntries((careers || []).map(c => [c.id, c.name]));
+    }
 
-    if (!careers?.length) {
-      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay carreras cargadas en tu institución todavía.</p>';
+    if (!careerIds.length) {
+      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay carreras disponibles todavía.</p>';
       return;
     }
 
-    const careerIds = careers.map(c => c.id);
-
-    // Materias de esas carreras + inscripciones actuales
+    // Materias de esa(s) carrera(s) + inscripciones actuales
     const [{ data: subjects }, { data: enrolled }] = await Promise.all([
-      sb.from('subjects').select('id, name, year, career_id').in('career_id', careerIds).order('name'),
+      sb.from('subjects').select('id, name, year, career_id').in('career_id', careerIds).order('year').order('name'),
       sb.from('student_subjects').select('subject_id').eq('student_id', session.id),
     ]);
 
     if (!subjects?.length) {
-      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay materias disponibles todavía.</p>';
+      content.innerHTML = '<p style="color:var(--text-3);font-size:.875rem;padding:8px 0">No hay materias cargadas todavía.</p>';
       return;
     }
 
     const enrolledIds = new Set((enrolled || []).map(e => e.subject_id));
-    const careerMap   = Object.fromEntries(careers.map(c => [c.id, c.name]));
 
-    // Agrupar por carrera
-    const byCareer = {};
+    // Agrupar por año dentro de la carrera
+    const byYear = {};
     for (const s of subjects) {
-      const cn = careerMap[s.career_id] || 'Sin carrera';
-      (byCareer[cn] = byCareer[cn] || []).push(s);
+      const key = s.year ? `Año ${s.year}` : 'Sin año asignado';
+      (byYear[key] = byYear[key] || []).push(s);
     }
 
-    content.innerHTML = Object.entries(byCareer).map(([carName, subs]) => `
+    // Cabecera con nombre de la carrera si hay una sola
+    const carName = careerIds.length === 1 ? Object.values(careerMap)[0] : null;
+    const header  = carName
+      ? `<div style="font-size:.8rem;color:var(--text-3);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)">${carName}</div>`
+      : '';
+
+    content.innerHTML = header + Object.entries(byYear).map(([yearLabel, subs]) => `
       <div style="margin-bottom:20px">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">${carName}</div>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">${yearLabel}</div>
         ${subs.map(s => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-            <div>
-              <div style="font-weight:500;color:var(--text-1);font-size:.875rem">${s.name}</div>
-              ${s.year ? `<div style="font-size:.75rem;color:var(--text-3)">Año ${s.year}</div>` : ''}
-            </div>
+            <div style="font-weight:500;color:var(--text-1);font-size:.875rem">${s.name}</div>
             ${enrolledIds.has(s.id)
               ? '<span class="badge badge-indigo" style="background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.3)">Inscripto</span>'
               : `<button class="btn btn-primary btn-sm" onclick="AlumnoMaterias.inscribirse('${s.id}',${JSON.stringify(s.name).replace(/"/g,'&quot;')})">Inscribirme</button>`

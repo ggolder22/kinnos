@@ -5,3 +5,6 @@
 
 ALTER TABLE students
   ADD COLUMN IF NOT EXISTS institution_id uuid REFERENCES institutions(id) ON DELETE SET NULL;
+
+ALTER TABLE students
+  ADD COLUMN IF NOT EXISTS career_id uuid REFERENCES careers(id) ON DELETE SET NULL;
