@@ -8,9 +8,10 @@ const DOCS_PERSONALES = [
 ];
 
 const ProfesorLegajo = {
-  _prof:     null,
-  _docs:     [],
-  _subjects: [],
+  _prof:      null,
+  _docs:      [],
+  _subjects:  [],
+  _plannings: [],
 
   async abrir() {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -30,15 +31,18 @@ const ProfesorLegajo = {
       { data: prof },
       { data: docs },
       { data: materias },
+      { data: plannings },
     ] = await Promise.all([
       sb.from('professors').select('*').eq('id', session.id).single(),
       sb.from('professor_documents').select('*').eq('professor_id', session.id).order('uploaded_at'),
       sb.from('professor_subjects').select('subjects(id, name)').eq('professor_id', session.id),
+      sb.from('subject_plannings').select('subject_id, updated_at').eq('professor_id', session.id),
     ]);
 
-    this._prof     = prof;
-    this._docs     = docs || [];
-    this._subjects = (materias || []).map(r => r.subjects).filter(Boolean);
+    this._prof      = prof;
+    this._docs      = docs || [];
+    this._subjects  = (materias || []).map(r => r.subjects).filter(Boolean);
+    this._plannings = plannings || [];
 
     this._render();
   },
@@ -77,25 +81,40 @@ const ProfesorLegajo = {
     }).join('');
 
     const planRows = this._subjects.map(s => {
-      const planDocs = (byType['PLANIFICACION'] || []).filter(d => d.subject_id === s.id);
+      const planDocs   = (byType['PLANIFICACION'] || []).filter(d => d.subject_id === s.id);
+      const planGuard  = this._plannings.find(p => p.subject_id === s.id);
+
+      const statusHtml = planGuard
+        ? `<span style="font-size:.75rem;color:var(--success)">✓ Guardada ${Utils.formatDate(planGuard.updated_at)}</span>`
+        : `<span style="font-size:.75rem;color:var(--text-3)">Sin planificación</span>`;
+
       const docsHtml = planDocs.map(d => `
         <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
           <a href="${d.file_url}" target="_blank" rel="noopener"
              style="flex:1;font-size:.85rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${d.file_name || 'Planificación'}
+            ${d.file_name || 'Planificación PDF'}
           </a>
           <span style="font-size:.72rem;color:var(--text-3)">${Utils.formatDate(d.uploaded_at)}</span>
           <button class="btn btn-danger btn-sm" onclick="ProfesorLegajo.eliminarDoc('${d.id}','${d.file_url.replace(/'/g, "\\'")}')">✕</button>
         </div>`).join('');
+
       return `
         <div class="legajo-doc-row">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:.875rem;font-weight:500;color:var(--text-1)">${s.name}</span>
-            <button class="btn btn-ghost btn-sm" onclick="ProfesorLegajo.subirDoc('PLANIFICACION', '${s.id}')">
-              ${planDocs.length ? 'Reemplazar' : '+ Subir'}
-            </button>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div>
+              <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${s.name}</div>
+              <div style="margin-top:3px">${statusHtml}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button class="btn btn-primary btn-sm" onclick="ProfesorLegajo.irAPlanificacion('${s.id}')">
+                ${planGuard ? 'Editar planificación' : 'Crear planificación'}
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="ProfesorLegajo.subirDoc('PLANIFICACION','${s.id}')" title="Subir PDF firmado">
+                📎 PDF
+              </button>
+            </div>
           </div>
-          ${docsHtml || '<div style="font-size:.8rem;color:var(--text-3);margin-top:4px">Sin planificación cargada</div>'}
+          ${docsHtml ? `<div style="margin-top:4px">${docsHtml}</div>` : ''}
         </div>`;
     }).join('');
 
@@ -204,6 +223,12 @@ const ProfesorLegajo = {
     document.getElementById('perfil-modal').classList.add('hidden');
     Utils.toast('Perfil actualizado');
     this.abrir();
+  },
+
+  irAPlanificacion(subjectId) {
+    ProfesorState.seccion = 'planificacion';
+    ProfesorMaterias.seleccionar(subjectId);
+    if (window.innerWidth <= 768) closeDrawer();
   },
 
   _pathDesdeUrl(url) {

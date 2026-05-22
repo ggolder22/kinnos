@@ -99,6 +99,130 @@
 }
 .legajo-doc-row:last-child { border-bottom: none; }
 
+/* ── Planificación editor ── */
+.plan-header-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.plan-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 32px;
+}
+.plan-meta-label {
+  display: block;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+.plan-meta-val {
+  font-size: .875rem;
+  color: var(--text-1);
+}
+.plan-sections { margin-bottom: 4px; }
+.plan-section  { margin-bottom: 22px; }
+.plan-section-label {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-2);
+  margin-bottom: 7px;
+}
+.plan-textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: .875rem;
+  line-height: 1.65;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text-1);
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+.plan-textarea:focus { outline: none; border-color: var(--accent); }
+.plan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px 0 8px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 768px) {
+  .plan-meta-grid { grid-template-columns: 1fr; }
+  .plan-actions { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Print: Planificación ── */
+#planificacion-print { display: none; }
+
+@media print {
+  .app,
+  .drawer-backdrop,
+  #toast-container { display: none !important; }
+
+  #planificacion-print {
+    display: block !important;
+    font-family: Georgia, serif;
+    font-size: 10.5pt;
+    color: #000;
+    padding: 0;
+  }
+  .plan-print-title {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+    letter-spacing: .08em;
+    margin-bottom: 18pt;
+    padding-bottom: 8pt;
+    border-bottom: 1.5pt solid #000;
+  }
+  .plan-print-meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 22pt;
+    font-size: 9.5pt;
+  }
+  .plan-print-meta td {
+    padding: 4pt 8pt;
+    border: .5pt solid #999;
+  }
+  .plan-print-meta td:first-child {
+    font-weight: bold;
+    width: 38%;
+    background: #f2f2f2;
+  }
+  .plan-print-section {
+    margin-bottom: 18pt;
+    break-inside: avoid;
+  }
+  .plan-print-section h3 {
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    border-bottom: .5pt solid #000;
+    padding-bottom: 3pt;
+    margin: 0 0 7pt;
+  }
+  .plan-print-section p {
+    font-size: 9.5pt;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+}
+
 /* ── Exam badge estado ── */
 .badge-active   { background: rgba(34,197,94,0.15);  color: #86efac; }
 .badge-inactive { background: rgba(100,116,139,0.15); color: #94a3b8; }

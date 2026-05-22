@@ -56,7 +56,8 @@
       <div class="tab" data-tab="unidades"  onclick="showTab('unidades')">Unidades</div>
       <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">Alumnos</div>
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
-      <div class="tab" data-tab="novedades" onclick="showTab('novedades')">Novedades</div>
+      <div class="tab" data-tab="novedades"      onclick="showTab('novedades')">Novedades</div>
+      <div class="tab" data-tab="planificacion" onclick="showTab('planificacion')">Planificación</div>
     </div>
 
     <!-- Bienvenida (sin materia seleccionada) -->
@@ -85,6 +86,10 @@
 
     <div class="page" id="page-legajo">
       <div id="legajo-content"></div>
+    </div>
+
+    <div class="page" id="page-planificacion">
+      <div id="planificacion-content"></div>
     </div>
   </div>
 
@@ -272,6 +277,7 @@
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
 <script src="../js/profesor/legajo.js"></script>
+<script src="../js/profesor/planificacion.js"></script>
 
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
@@ -295,10 +301,11 @@
     document.getElementById(`page-${nombre}`).classList.add('active');
 
     const modulos = {
-      unidades:  ProfesorUnidades,
-      alumnos:   ProfesorAlumnos,
-      examenes:  ProfesorExamenes,
-      novedades: ProfesorNovedades,
+      unidades:      ProfesorUnidades,
+      alumnos:       ProfesorAlumnos,
+      examenes:      ProfesorExamenes,
+      novedades:     ProfesorNovedades,
+      planificacion: ProfesorPlanificacion,
     };
     modulos[nombre]?.init();
   }
@@ -317,6 +324,20 @@
     if (window.innerWidth <= 768) closeDrawer();
   });
 </script>
+
+<!-- ══ Print: Planificación (oculto en pantalla, visible solo al imprimir) ══ -->
+<div id="planificacion-print">
+  <div class="plan-print-title">PLANIFICACIÓN ANUAL</div>
+  <table class="plan-print-meta">
+    <tr><td>Institución</td><td id="pp-inst"></td></tr>
+    <tr><td>Carrera</td><td id="pp-carrera"></td></tr>
+    <tr><td>Espacio curricular</td><td id="pp-materia"></td></tr>
+    <tr><td>Año</td><td id="pp-year"></td></tr>
+    <tr><td>Profesor/a</td><td id="pp-prof"></td></tr>
+    <tr><td>Ciclo lectivo</td><td id="pp-ciclo"></td></tr>
+  </table>
+  <div id="pp-body"></div>
+</div>
 
 </body>
 </html>
