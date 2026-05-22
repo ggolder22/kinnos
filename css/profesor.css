@@ -54,6 +54,51 @@
   content: '📌 ';
 }
 
+/* ── Legajo ── */
+.legajo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+.legajo-btn-icon {
+  font-size: .8rem;
+  opacity: .45;
+  transition: opacity .15s;
+}
+.legajo-btn:hover .legajo-btn-icon { opacity: 1; }
+
+.legajo-profile-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 28px;
+}
+.legajo-num-badge {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.legajo-fullname {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.legajo-meta {
+  font-size: .8rem;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.legajo-doc-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.legajo-doc-row:last-child { border-bottom: none; }
+
 /* ── Exam badge estado ── */
 .badge-active   { background: rgba(34,197,94,0.15);  color: #86efac; }
 .badge-inactive { background: rgba(100,116,139,0.15); color: #94a3b8; }

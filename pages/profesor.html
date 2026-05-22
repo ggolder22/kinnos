@@ -26,6 +26,10 @@
       </div>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
+      <div class="nav-section" style="margin-top:8px">Mi cuenta</div>
+      <div class="nav-item" id="nav-legajo" onclick="ProfesorLegajo.abrir()">
+        <span class="icon">📋</span> Mi Legajo
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
@@ -41,7 +45,10 @@
         <div id="topbar-sub" class="topbar-sub"></div>
       </div>
       <div class="topbar-right">
-        <span id="prof-greeting"></span>
+        <button class="btn btn-ghost btn-sm legajo-btn" onclick="ProfesorLegajo.abrir()">
+          <span id="prof-greeting"></span>
+          <span class="legajo-btn-icon">⚙</span>
+        </button>
       </div>
     </div>
 
@@ -74,6 +81,10 @@
 
     <div class="page" id="page-novedades">
       <div id="novedades-content"></div>
+    </div>
+
+    <div class="page" id="page-legajo">
+      <div id="legajo-content"></div>
     </div>
   </div>
 
@@ -194,6 +205,29 @@
   </div>
 </div>
 
+<!-- Modal: Perfil del profesor -->
+<div class="modal-backdrop hidden" id="perfil-modal">
+  <div class="modal" style="max-width:440px">
+    <h4>Editar perfil</h4>
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input type="text" id="perfil-modal-name" placeholder="Ej: María González">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="perfil-modal-email" placeholder="Ej: maria@escuela.edu.ar">
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input type="text" id="perfil-modal-phone" placeholder="Ej: 2604 123456">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('perfil-modal').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary" id="perfil-modal-save" onclick="ProfesorLegajo.guardarPerfil()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Examen -->
 <div class="modal-backdrop hidden" id="exam-modal">
   <div class="modal">
@@ -237,6 +271,7 @@
 <script src="../js/profesor/alumnos.js"></script>
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
+<script src="../js/profesor/legajo.js"></script>
 
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
