@@ -14,12 +14,17 @@ const ProfesorUnidades = {
   },
 
   _render(data) {
-    const el = document.getElementById('unidades-content');
-    const addBtn = `<button class="btn btn-primary btn-sm" onclick="ProfesorUnidades.openModal()">+ Nueva unidad</button>`;
+    const el       = document.getElementById('unidades-content');
+    const planLink = `<span style="font-size:.78rem;color:var(--text-3)">
+      Las unidades se definen en la pestaña <strong style="color:var(--text-2);cursor:pointer" onclick="showTab('planificacion')">Planificación</strong>.
+    </span>`;
 
     if (!data.length) {
-      el.innerHTML = `<div class="page-header"><h3>Unidades</h3>${addBtn}</div>
-        <div class="empty-state"><div class="icon">📚</div><p>No hay unidades todavía.</p></div>`;
+      el.innerHTML = `<div class="page-header"><h3>Unidades</h3>${planLink}</div>
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <p>Definí las unidades en la pestaña <strong style="cursor:pointer" onclick="showTab('planificacion')">Planificación</strong> y aparecerán aquí.</p>
+        </div>`;
       return;
     }
 
@@ -45,7 +50,7 @@ const ProfesorUnidades = {
       </tr>`).join('');
 
     el.innerHTML = `
-      <div class="page-header"><h3>Unidades</h3>${addBtn}</div>
+      <div class="page-header"><h3>Unidades</h3>${planLink}</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Título</th><th>Etiqueta</th><th>Temas</th><th>PDF</th><th>Acciones</th></tr></thead>
