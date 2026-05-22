@@ -88,10 +88,13 @@
      MODALES
 ════════════════════════════════════════════ -->
 
-<!-- Modal: Nueva materia -->
+<!-- Modal: Agregar materia del plan -->
 <div class="modal-backdrop hidden" id="nueva-mat-modal">
-  <div class="modal">
-    <h4>Nueva materia</h4>
+  <div class="modal" style="max-width:560px">
+    <h4>Agregar materia</h4>
+    <p style="font-size:.8rem;color:var(--text-3);margin-bottom:16px">
+      Elegí la institución y la carrera para ver las materias del plan de estudios.
+    </p>
     <div class="form-group">
       <label>Institución *</label>
       <select id="nueva-mat-inst" onchange="ProfesorMaterias.onInstChange()">
@@ -100,22 +103,13 @@
     </div>
     <div class="form-group">
       <label>Carrera *</label>
-      <select id="nueva-mat-carrera">
+      <select id="nueva-mat-carrera" onchange="ProfesorMaterias.onCarreraChange()">
         <option value="">Primero seleccioná institución</option>
       </select>
     </div>
-    <div class="form-group">
-      <label>Nombre de la materia *</label>
-      <input type="text" id="nueva-mat-nombre" placeholder="Ej: Electrónica Aplicada">
-    </div>
-    <div class="form-group">
-      <label>Año del plan</label>
-      <input type="number" id="nueva-mat-year" placeholder="Ej: 3" min="1" max="6">
-    </div>
-    <p style="font-size:.78rem;color:var(--text-3)">El código de inscripción se genera automáticamente.</p>
+    <div id="nueva-mat-lista" style="max-height:340px;overflow-y:auto;margin-top:4px"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="ProfesorMaterias.cerrarModalCrear()">Cancelar</button>
-      <button class="btn btn-primary" id="nueva-mat-save" onclick="ProfesorMaterias.guardarNuevaMateria()">Crear materia</button>
+      <button class="btn btn-ghost" onclick="ProfesorMaterias.cerrarModalCrear()">Cerrar</button>
     </div>
   </div>
 </div>

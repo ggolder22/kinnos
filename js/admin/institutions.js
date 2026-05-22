@@ -243,14 +243,20 @@ const AdminInstitutions = {
     const el  = document.getElementById('inst-content');
     const addBtn = `<button class="btn btn-primary btn-sm" onclick="AdminInstitutions.openMateriaModal()">+ Nueva materia</button>`;
     if (!data.length) {
-      el.innerHTML = `<div class="page-header"><h3>Materias</h3>${addBtn}</div>
+      el.innerHTML = `<div class="page-header"><h3>Plan de estudios</h3>${addBtn}</div>
         <div class="empty-state"><div class="icon">📚</div><p>No hay materias en esta carrera.</p></div>`;
       return;
     }
     const rows = data.map(m => `
       <tr>
         <td class="text-main">${m.name}</td>
-        <td>${m.year ? `Año ${m.year}` : '—'}</td>
+        <td>${m.year ? `${m.year}°` : '—'}</td>
+        <td>${m.despliegue || '—'}</td>
+        <td>${m.campo_formacion
+              ? `<span class="badge ${this._badgeCampo(m.campo_formacion)}">${m.campo_formacion}</span>`
+              : '—'}</td>
+        <td style="text-align:center">${m.hs_semana ?? '—'}</td>
+        <td style="text-align:center">${m.hs_total ?? '—'}</td>
         <td><span class="badge badge-code">${m.join_code}</span></td>
         <td>
           <div class="td-actions">
@@ -260,20 +266,37 @@ const AdminInstitutions = {
         </td>
       </tr>`).join('');
     el.innerHTML = `
-      <div class="page-header"><h3>Materias · ${this.state.carreraName}</h3>${addBtn}</div>
+      <div class="page-header"><h3>Plan de estudios · ${this.state.carreraName}</h3>${addBtn}</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Materia</th><th>Año</th><th>Código inscripción</th><th>Acciones</th></tr></thead>
+          <thead><tr>
+            <th>Espacio curricular</th><th>Año</th><th>Despliegue</th>
+            <th>Campo</th><th>Hs/sem</th><th>Hs total</th><th>Código</th><th>Acciones</th>
+          </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
   },
 
+  _badgeCampo(campo) {
+    const map = {
+      'General': 'badge-indigo',
+      'Específica': '',
+      'Fundamento': 'badge-code',
+      'P. Profesionalizantes': '',
+    };
+    return map[campo] || '';
+  },
+
   openMateriaModal(item = null) {
-    document.getElementById('materia-modal-title').textContent = item ? 'Editar materia' : 'Nueva materia';
-    document.getElementById('materia-modal-id').value   = item?.id   || '';
-    document.getElementById('materia-modal-name').value = item?.name || '';
-    document.getElementById('materia-modal-year').value = item?.year || '';
+    document.getElementById('materia-modal-title').textContent     = item ? 'Editar materia' : 'Nueva materia';
+    document.getElementById('materia-modal-id').value              = item?.id              || '';
+    document.getElementById('materia-modal-name').value            = item?.name            || '';
+    document.getElementById('materia-modal-year').value            = item?.year            || '';
+    document.getElementById('materia-modal-despliegue').value      = item?.despliegue      || '';
+    document.getElementById('materia-modal-campo').value           = item?.campo_formacion || '';
+    document.getElementById('materia-modal-hs-semana').value       = item?.hs_semana       || '';
+    document.getElementById('materia-modal-hs-total').value        = item?.hs_total        || '';
     document.getElementById('materia-modal').classList.remove('hidden');
     document.getElementById('materia-modal-name').focus();
   },
@@ -283,18 +306,23 @@ const AdminInstitutions = {
   },
 
   async saveMateria() {
-    const btn  = document.getElementById('materia-modal-save');
-    const id   = document.getElementById('materia-modal-id').value;
-    const name = document.getElementById('materia-modal-name').value.trim();
-    const year = parseInt(document.getElementById('materia-modal-year').value) || null;
+    const btn       = document.getElementById('materia-modal-save');
+    const id        = document.getElementById('materia-modal-id').value;
+    const name      = document.getElementById('materia-modal-name').value.trim();
+    const year      = parseInt(document.getElementById('materia-modal-year').value) || null;
+    const despliegue     = document.getElementById('materia-modal-despliegue').value || null;
+    const campo_formacion = document.getElementById('materia-modal-campo').value || null;
+    const hs_semana = parseInt(document.getElementById('materia-modal-hs-semana').value) || null;
+    const hs_total  = parseInt(document.getElementById('materia-modal-hs-total').value)  || null;
     if (!name) { Utils.toast('El nombre es obligatorio', 'error'); return; }
 
     Utils.btnLoading(btn, true);
+    const payload = { name, year, despliegue, campo_formacion, hs_semana, hs_total };
     let error;
     if (id) {
-      ({ error } = await sb.from('subjects').update({ name, year }).eq('id', id));
+      ({ error } = await sb.from('subjects').update(payload).eq('id', id));
     } else {
-      ({ error } = await sb.from('subjects').insert({ name, year, career_id: this.state.carreraId }));
+      ({ error } = await sb.from('subjects').insert({ ...payload, career_id: this.state.carreraId }));
     }
     Utils.btnLoading(btn, false);
 

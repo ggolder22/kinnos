@@ -62,21 +62,18 @@ const ProfesorMaterias = {
     showTab(ProfesorState.seccion || 'unidades');
   },
 
-  // ── Crear nueva materia ───────────────────────────────────────
+  // ── Tomar materia del plan ────────────────────────────────────
 
   async abrirModalCrear() {
-    // Cargar instituciones
     const { data: insts } = await sb.from('institutions').select('id, name').order('name');
     if (!insts?.length) {
-      Utils.toast('No hay instituciones cargadas. Pedile al administrador que cree una primero.', 'error');
+      Utils.toast('No hay instituciones cargadas aún.', 'error');
       return;
     }
     Utils.fillSelect('nueva-mat-inst', insts, 'id', 'name', 'Seleccioná institución…');
     document.getElementById('nueva-mat-carrera').innerHTML = '<option value="">Primero seleccioná institución</option>';
-    document.getElementById('nueva-mat-nombre').value = '';
-    document.getElementById('nueva-mat-year').value  = '';
+    document.getElementById('nueva-mat-lista').innerHTML   = '';
     document.getElementById('nueva-mat-modal').classList.remove('hidden');
-    document.getElementById('nueva-mat-nombre').focus();
   },
 
   cerrarModalCrear() {
@@ -86,6 +83,7 @@ const ProfesorMaterias = {
   async onInstChange() {
     const instId = document.getElementById('nueva-mat-inst').value;
     const sel = document.getElementById('nueva-mat-carrera');
+    document.getElementById('nueva-mat-lista').innerHTML = '';
     if (!instId) { sel.innerHTML = '<option value="">Primero seleccioná institución</option>'; return; }
 
     sel.innerHTML = '<option value="">Cargando…</option>';
@@ -99,39 +97,59 @@ const ProfesorMaterias = {
     Utils.fillSelect('nueva-mat-carrera', carreras, 'id', 'name', 'Seleccioná carrera…');
   },
 
-  async guardarNuevaMateria() {
-    const btn      = document.getElementById('nueva-mat-save');
+  async onCarreraChange() {
     const carreraId = document.getElementById('nueva-mat-carrera').value;
-    const nombre   = document.getElementById('nueva-mat-nombre').value.trim();
-    const year     = parseInt(document.getElementById('nueva-mat-year').value) || null;
+    const lista = document.getElementById('nueva-mat-lista');
+    if (!carreraId) { lista.innerHTML = ''; return; }
 
-    if (!carreraId) { Utils.toast('Seleccioná una carrera', 'error'); return; }
-    if (!nombre)    { Utils.toast('El nombre es obligatorio', 'error'); return; }
+    lista.innerHTML = '<div style="color:var(--text-3);font-size:.85rem;padding:8px 0">Cargando…</div>';
 
-    Utils.btnLoading(btn, true);
     const session = Auth.session();
+    const [{ data: subjects }, { data: yaAgregadas }] = await Promise.all([
+      sb.from('subjects').select('id, name, year, despliegue, campo_formacion')
+        .eq('career_id', carreraId).order('year').order('name'),
+      sb.from('professor_subjects').select('subject_id').eq('professor_id', session.id),
+    ]);
 
-    // Crear la materia (el trigger genera el join_code)
-    const { data: materia, error } = await sb
-      .from('subjects')
-      .insert({ name: nombre, year, career_id: carreraId })
-      .select()
-      .single();
-
-    if (error) {
-      Utils.btnLoading(btn, false);
-      Utils.toast('Error al crear: ' + error.message, 'error');
+    if (!subjects?.length) {
+      lista.innerHTML = '<p style="color:var(--text-3);font-size:.85rem;padding:8px 0">Esta carrera no tiene materias cargadas en el plan. Pedile al admin que las cargue.</p>';
       return;
     }
 
-    // Asignar el profesor a la materia creada
-    await sb.from('professor_subjects')
-      .insert({ professor_id: session.id, subject_id: materia.id, is_primary: true });
+    const yaIds = new Set((yaAgregadas || []).map(r => r.subject_id));
 
-    Utils.btnLoading(btn, false);
-    Utils.toast(`Materia "${nombre}" creada — código: ${materia.join_code}`);
+    // Agrupar por año
+    const byYear = {};
+    for (const s of subjects) {
+      const key = s.year ? `${s.year}° Año` : 'Sin año';
+      (byYear[key] = byYear[key] || []).push(s);
+    }
+
+    lista.innerHTML = Object.entries(byYear).map(([yr, subs]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:6px">${yr}</div>
+        ${subs.map(s => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:7px;margin-bottom:5px">
+            <div>
+              <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${s.name}</div>
+              ${s.campo_formacion ? `<div style="font-size:.72rem;color:var(--text-3)">${s.campo_formacion}${s.despliegue ? ' · ' + s.despliegue : ''}</div>` : ''}
+            </div>
+            ${yaIds.has(s.id)
+              ? '<span style="font-size:.75rem;color:var(--success)">✓ Agregada</span>'
+              : `<button class="btn btn-primary btn-sm" onclick="ProfesorMaterias.tomarMateria('${s.id}','${s.name.replace(/'/g, "\\'")}')">Tomar</button>`
+            }
+          </div>`).join('')}
+      </div>`).join('');
+  },
+
+  async tomarMateria(subjectId, nombre) {
+    const session = Auth.session();
+    const { error } = await sb.from('professor_subjects')
+      .insert({ professor_id: session.id, subject_id: subjectId, is_primary: true });
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast(`"${nombre}" agregada a tus materias`);
     this.cerrarModalCrear();
     await this._loadMaterias();
-    this.seleccionar(materia.id);
+    this.seleccionar(subjectId);
   },
 };

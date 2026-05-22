@@ -114,18 +114,55 @@
 
 <!-- Modal: Materia -->
 <div class="modal-backdrop hidden" id="materia-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:540px">
     <h4 id="materia-modal-title">Nueva materia</h4>
     <input type="hidden" id="materia-modal-id">
     <div class="form-group">
-      <label>Nombre *</label>
-      <input type="text" id="materia-modal-name" placeholder="Ej: Electrónica Aplicada">
+      <label>Espacio curricular *</label>
+      <input type="text" id="materia-modal-name" placeholder="Ej: Electrotecnia">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Año</label>
+        <select id="materia-modal-year">
+          <option value="">—</option>
+          <option value="1">1°</option>
+          <option value="2">2°</option>
+          <option value="3">3°</option>
+          <option value="4">4°</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Despliegue</label>
+        <select id="materia-modal-despliegue">
+          <option value="">—</option>
+          <option value="Cuatrimestre 1">Cuatrimestre 1</option>
+          <option value="Cuatrimestre 2">Cuatrimestre 2</option>
+          <option value="Anual">Anual</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
-      <label>Año del plan</label>
-      <input type="number" id="materia-modal-year" placeholder="Ej: 3" min="1" max="6">
+      <label>Campo de formación</label>
+      <select id="materia-modal-campo">
+        <option value="">—</option>
+        <option value="General">General</option>
+        <option value="Específica">Específica</option>
+        <option value="Fundamento">Fundamento</option>
+        <option value="P. Profesionalizantes">P. Profesionalizantes</option>
+      </select>
     </div>
-    <p style="font-size:.8rem;color:var(--text-3);margin-top:-8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Hs/cátedra semana</label>
+        <input type="number" id="materia-modal-hs-semana" placeholder="Ej: 5" min="1">
+      </div>
+      <div class="form-group">
+        <label>Hs/cátedra total</label>
+        <input type="number" id="materia-modal-hs-total" placeholder="Ej: 160" min="1">
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--text-3);margin-top:-4px">
       El código de inscripción se genera automáticamente.
     </p>
     <div class="modal-actions">
