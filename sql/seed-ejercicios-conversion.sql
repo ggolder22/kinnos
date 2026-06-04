@@ -14,7 +14,6 @@ WITH target_unit AS (
   JOIN subjects s ON s.id = u.subject_id
   WHERE u.unit_num = 1
     AND s.name ILIKE '%Electrotecnia%'
-  ORDER BY u.created_at DESC
   LIMIT 1
 )
 INSERT INTO unit_exercises (unit_id, order_num, type, statement, answer, answer_numeric, tolerance, has_error, error_explanation, solution_steps)
