@@ -160,6 +160,16 @@ const AlumnoEjercicios = {
     }
 
     this._attempts[ej.id] = { answered: true, correct, studentAnswer: raw };
+
+    // Guardar en BD (solo primer intento, sin bloquear la UI)
+    const session = Auth.session();
+    if (session.id) {
+      sb.from('student_exercise_attempts').upsert(
+        { student_id: session.id, exercise_id: ej.id, is_correct: correct, student_answer: raw },
+        { onConflict: 'student_id,exercise_id', ignoreDuplicates: true }
+      );
+    }
+
     this._renderEjercicio();
   },
 

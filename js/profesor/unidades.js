@@ -43,6 +43,7 @@ const ProfesorUnidades = {
         </td>
         <td>
           <div class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="ProfesorEjercicios.abrir('${u.id}','${u.title.replace(/'/g, "\\'")}')">Ejercicios</button>
             <button class="btn btn-ghost btn-sm" onclick="ProfesorUnidades.openModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar</button>
             <button class="btn btn-danger btn-sm" onclick="ProfesorUnidades.delete('${u.id}','${u.title.replace(/'/g, "\\'")}','${u.pdf_url || ''}')">Eliminar</button>
           </div>

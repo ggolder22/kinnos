@@ -210,6 +210,75 @@
   </div>
 </div>
 
+<!-- Modal: Ejercicios (profesor) -->
+<div class="modal-backdrop hidden" id="ejerc-prof-modal">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 id="ejerc-prof-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ejercicios</h4>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorEjercicios.cerrar()">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">
+      <button class="ejerc-tab active" data-tab="ejercicios" onclick="ProfesorEjercicios.switchTab('ejercicios')">Ejercicios</button>
+      <button class="ejerc-tab"        data-tab="resultados" onclick="ProfesorEjercicios.switchTab('resultados')">Resultados alumnos</button>
+    </div>
+
+    <!-- Botón agregar -->
+    <div id="ejerc-list-header" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="ProfesorEjercicios.abrirFormulario()">+ Agregar ejercicio</button>
+    </div>
+
+    <!-- Formulario nuevo ejercicio -->
+    <div id="ejerc-form-area" class="hidden" style="background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="ejerc-form-type" onchange="ProfesorEjercicios._toggleFormFields()">
+          <option value="solve">Resolución — el alumno calcula y responde</option>
+          <option value="find_error">Análisis — hay un error, el alumno lo identifica</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Enunciado *</label>
+        <textarea id="ejerc-form-statement" rows="4" placeholder="Escribí el enunciado del ejercicio…"></textarea>
+      </div>
+      <div id="ejerc-form-solve-fields">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Respuesta correcta</label>
+            <input type="text" id="ejerc-form-answer" placeholder="Ej: 20 m/s">
+          </div>
+          <div class="form-group">
+            <label>Valor numérico</label>
+            <input type="number" id="ejerc-form-numeric" placeholder="Ej: 20" step="any">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Pasos del procedimiento (uno por línea)</label>
+          <textarea id="ejerc-form-steps" rows="3" placeholder="72 ÷ 3,6 = 20&#10;Resultado: 20 m/s"></textarea>
+        </div>
+      </div>
+      <div id="ejerc-form-error-fields" style="display:none">
+        <div class="form-group">
+          <label>Explicación del error (se muestra después del intento)</label>
+          <textarea id="ejerc-form-error-exp" rows="3" placeholder="El error es… La respuesta correcta sería…"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions" style="padding:0;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ejerc-form-area').classList.add('hidden')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="ejerc-form-save" onclick="ProfesorEjercicios.guardar()">Agregar</button>
+      </div>
+    </div>
+
+    <!-- Lista / Resultados -->
+    <div id="ejerc-prof-body" style="max-height:380px;overflow-y:auto"></div>
+
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="ProfesorEjercicios.cerrar()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Perfil del profesor -->
 <div class="modal-backdrop hidden" id="perfil-modal">
   <div class="modal" style="max-width:440px">
@@ -278,6 +347,7 @@
 <script src="../js/profesor/examenes.js"></script>
 <script src="../js/profesor/legajo.js"></script>
 <script src="../js/profesor/planificacion.js"></script>
+<script src="../js/profesor/ejercicios_prof.js"></script>
 
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
