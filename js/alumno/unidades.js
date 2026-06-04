@@ -30,6 +30,7 @@ const AlumnoUnidades = {
         ? `<div class="unidad-content-text">${this._escapeHtml(u.content)}</div>` : '';
       const pdf = u.pdf_url
         ? `<button class="pdf-link" onclick="AlumnoUnidades.openPdf(${JSON.stringify(u.pdf_url).replace(/"/g,'&quot;')},${JSON.stringify(u.title).replace(/"/g,'&quot;')})">📄 Ver PDF</button>` : '';
+      const ejercBtn = `<button class="btn btn-ghost btn-sm ej-open-btn" onclick="event.stopPropagation();AlumnoEjercicios.abrir('${u.id}',${JSON.stringify(u.title).replace(/"/g,'&quot;')})">Ejercicios</button>`;
       const meta = [u.tag, u.year ? `Año ${u.year}` : null].filter(Boolean).join(' · ');
 
       return `
@@ -41,6 +42,7 @@ const AlumnoUnidades = {
               ${meta ? `<div class="unidad-meta">${meta}</div>` : ''}
             </div>
             <span class="unidad-chevron">›</span>
+          ${ejercBtn}
           </div>
           <div class="unidad-body">
             ${topics}

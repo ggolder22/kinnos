@@ -114,6 +114,36 @@
 </div>
 
 <!-- ════════════════════════════════════════════
+     MODAL: Ejercicios
+════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="ejercicios-modal">
+  <div class="modal modal-ejercicios">
+    <div class="ej-modal-header">
+      <div>
+        <h4 id="ejercicios-modal-title" style="margin:0">Ejercicios</h4>
+        <div class="ej-progress-wrap">
+          <div class="ej-progress-bar-bg">
+            <div class="ej-progress-bar-fill" id="ejercicios-progress-bar" style="width:0%"></div>
+          </div>
+          <span id="ejercicios-progress-text" class="ej-progress-text">0 / 0 completados</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="AlumnoEjercicios.cerrar()">✕</button>
+    </div>
+
+    <div id="ejercicios-body" style="min-height:180px;padding:20px 24px"></div>
+
+    <div class="ej-modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="AlumnoEjercicios.imprimir()">🖨 Imprimir / PDF</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="ej-prev-btn" onclick="AlumnoEjercicios.anterior()" disabled>← Anterior</button>
+        <button class="btn btn-primary btn-sm" id="ej-next-btn" onclick="AlumnoEjercicios.siguiente()" disabled>Siguiente →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
      OVERLAY DE EXAMEN
 ════════════════════════════════════════════ -->
 <div id="exam-overlay">
@@ -148,6 +178,7 @@
 <script src="../js/alumno/unidades.js"></script>
 <script src="../js/alumno/novedades.js"></script>
 <script src="../js/alumno/examenes.js"></script>
+<script src="../js/alumno/ejercicios.js"></script>
 
 <script>
   if (!Auth.require('alumno')) throw new Error('no-auth');
@@ -158,6 +189,9 @@
     if (!document.getElementById('pdf-modal').classList.contains('hidden')) {
       document.getElementById('pdf-modal-frame').src = '';
     }
+  });
+  document.getElementById('ejercicios-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) AlumnoEjercicios.cerrar();
   });
   document.getElementById('explorar-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
@@ -192,6 +226,9 @@
     if (window.innerWidth <= 768) closeDrawer();
   });
 </script>
+
+<!-- Print: Ejercicios (solo visible al imprimir) -->
+<div id="ejercicios-print-body"></div>
 
 </body>
 </html>
