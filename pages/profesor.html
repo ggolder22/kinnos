@@ -426,6 +426,40 @@
 </div>
 
 <!-- ════════════════════════════════════════════
+     OVERLAY: Importar examen desde archivo
+════════════════════════════════════════════ -->
+<div id="exam-import-overlay" style="position:fixed;inset:0;background:var(--bg-base);z-index:250;display:none;flex-direction:column;overflow-y:auto">
+
+  <div class="exam-overlay-header">
+    <div style="min-width:0">
+      <h2 style="font-size:1rem;font-weight:600;color:var(--text-1)">Vista previa del examen importado</h2>
+      <div id="exam-import-count" style="font-size:.78rem;color:var(--text-3);margin-top:2px"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.descargarPlantilla()" title="Descargar plantilla de formato">
+        📄 Plantilla
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes._cerrarImport()">✕ Cancelar</button>
+      <button class="btn btn-primary" id="exam-import-save" onclick="ProfesorExamenes._crearDesdeImport()">
+        ✓ Crear examen
+      </button>
+    </div>
+  </div>
+
+  <div style="max-width:760px;width:100%;margin:0 auto;padding:32px 24px">
+    <!-- Información del formato -->
+    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:.82rem;color:var(--text-2);line-height:1.7">
+      <strong style="color:var(--accent)">Formato requerido:</strong>
+      El archivo debe seguir el formato Kinnos: <code>EXAMEN:</code>, <code>TIEMPO:</code>, <code>P1.</code>…<code>Pn.</code>, opciones <code>a)</code>–<code>d)</code>, <code>CORRECTA:</code>, <code>PUNTOS:</code>.
+      <button onclick="ProfesorExamenes.descargarPlantilla()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;text-decoration:underline;padding:0;margin-left:4px">
+        Descargar plantilla de ejemplo →
+      </button>
+    </div>
+    <div id="exam-import-body"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
      SCRIPTS
 ════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -1,6 +1,7 @@
 const ProfesorExamenes = {
-  _examActual: null,   // { id, title } del examen abierto en preguntas/resultados
-  _revisionData: null, // { resultado, preguntas } de la revisión en curso
+  _examActual: null,    // { id, title } del examen abierto en preguntas/resultados
+  _revisionData: null,  // { resultado, preguntas } de la revisión en curso
+  _importData: null,    // datos parseados del archivo importado
 
   // ── Lista principal ──────────────────────────────────────
 
@@ -35,7 +36,13 @@ const ProfesorExamenes = {
 
   _render(data, pendientes = {}) {
     const el  = document.getElementById('examenes-content');
-    const addBtn = `<button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.openModal()">+ Nuevo examen</button>`;
+    const addBtn = `
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.importarDesdeArchivo()" title="Importar desde PDF o Word con formato Kinnos">
+          📥 Importar desde archivo
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.openModal()">+ Nuevo examen</button>
+      </div>`;
 
     if (!data.length) {
       el.innerHTML = `<div class="page-header"><h3>Exámenes</h3>${addBtn}</div>
@@ -598,5 +605,372 @@ const ProfesorExamenes = {
   _nombreArchivo(url) {
     try { return decodeURIComponent(url.split('/').pop().split('?')[0]); }
     catch { return 'archivo.pdf'; }
+  },
+
+  // ════════════════════════════════════════════════════════
+  //  IMPORTAR EXAMEN DESDE ARCHIVO (PDF / Word)
+  // ════════════════════════════════════════════════════════
+
+  descargarPlantilla() {
+    const tpl = `EXAMEN: Parcial 1 — Circuitos Eléctricos
+TIEMPO: 60
+INSTRUCCIONES: Leé cada pregunta con atención. En las de opción múltiple marcá una sola respuesta.
+
+P1. ¿Cuál es la unidad de medida de la resistencia eléctrica?
+a) Ampere (A)
+b) Voltio (V)
+c) Ohm (Ω)
+d) Watt (W)
+CORRECTA: c
+PUNTOS: 1
+
+P2. La ley de Ohm establece que la tensión es igual a la corriente multiplicada por la resistencia.
+CORRECTA: Verdadero
+PUNTOS: 1
+
+P3. Enumerá las leyes de Kirchhoff y explicá brevemente cada una.
+CORRECTA: Ley de corrientes (nodos): la suma de corrientes que entran a un nodo es igual a la suma de las que salen. Ley de tensiones (mallas): la suma algebraica de tensiones en una malla cerrada es cero.
+PUNTOS: 3
+
+P4. Calculá la corriente que circula por un circuito con una resistencia de 10 Ω y una tensión de 220 V.
+CORRECTA: 22 A
+PUNTOS: 2
+`;
+    const blob = new Blob([tpl], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plantilla-examen-kinnos.txt';
+    a.click();
+  },
+
+  importarDesdeArchivo() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.txt';
+    input.onchange = e => { if (e.target.files[0]) this._procesarArchivo(e.target.files[0]); };
+    input.click();
+  },
+
+  async _procesarArchivo(file) {
+    const overlay = document.getElementById('exam-import-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('exam-import-body').innerHTML =
+      '<div class="loading" style="padding:60px;text-align:center">Leyendo archivo…</div>';
+
+    try {
+      let texto = '';
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'pdf') {
+        texto = await this._leerPDF(file);
+      } else if (ext === 'docx' || ext === 'doc') {
+        texto = await this._leerWord(file);
+      } else {
+        texto = await file.text();
+      }
+
+      const datos = this._parsearTexto(texto);
+
+      if (!datos.questions.length) {
+        document.getElementById('exam-import-body').innerHTML = `
+          <div style="padding:40px;text-align:center">
+            <div style="font-size:2rem;margin-bottom:16px">⚠️</div>
+            <p style="color:var(--text-2);margin-bottom:8px">No se encontraron preguntas en el archivo.</p>
+            <p style="color:var(--text-3);font-size:.85rem;margin-bottom:20px">
+              Verificá que el archivo siga el formato Kinnos.<br>
+              Las preguntas deben estar marcadas como <code>P1.</code>, <code>P2.</code>, etc.
+            </p>
+            <button class="btn btn-ghost" onclick="ProfesorExamenes._cerrarImport()">Cerrar</button>
+            <button class="btn btn-primary" style="margin-left:8px" onclick="ProfesorExamenes.descargarPlantilla()">
+              Descargar plantilla
+            </button>
+          </div>`;
+        return;
+      }
+
+      this._importData = datos;
+      this._renderPreviewImport();
+
+    } catch (e) {
+      document.getElementById('exam-import-body').innerHTML = `
+        <div style="padding:40px;text-align:center">
+          <p style="color:var(--danger)">Error al leer el archivo: ${e.message}</p>
+          <button class="btn btn-ghost" style="margin-top:16px" onclick="ProfesorExamenes._cerrarImport()">Cerrar</button>
+        </div>`;
+    }
+  },
+
+  // ── Lectores de archivo ───────────────────────────────────
+
+  async _leerPDF(file) {
+    await this._cargarLibreria(
+      'pdfjsLib',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+    );
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let texto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      // Reconstruir líneas respetando posición Y
+      let lastY = null;
+      for (const item of content.items) {
+        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 2) texto += '\n';
+        texto += item.str;
+        lastY = item.transform[5];
+      }
+      texto += '\n';
+    }
+    return texto;
+  },
+
+  async _leerWord(file) {
+    await this._cargarLibreria(
+      'mammoth',
+      'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js'
+    );
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  },
+
+  _cargarLibreria(globalName, src) {
+    if (window[globalName]) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+      document.head.appendChild(s);
+    });
+  },
+
+  // ── Parser del formato Kinnos ─────────────────────────────
+
+  _parsearTexto(rawText) {
+    // Normalizar: insertar saltos de línea antes de cada marcador clave
+    // Esto maneja PDFs que colapsan todo en pocas líneas
+    let text = rawText
+      .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+      .replace(/\s*(EXAMEN\s*:)/gi,       '\nEXAMEN:')
+      .replace(/\s*(TIEMPO\s*:)/gi,        '\nTIEMPO:')
+      .replace(/\s*(INSTRUCCIONES\s*:)/gi, '\nINSTRUCCIONES:')
+      .replace(/\s*(CORRECTA\s*:)/gi,      '\nCORRECTA:')
+      .replace(/\s*(PUNTOS?\s*:)/gi,       '\nPUNTOS:')
+      .replace(/\s*(P\s*\d+\s*[.\-:])/gi,  '\n$1')
+      .replace(/\n([a-dA-D])\s*[).\-]\s+/g, '\n$1) ');
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const result = { title: '', time_limit: null, instructions: '', questions: [] };
+    let currentQ = null;
+
+    for (const line of lines) {
+      if (/^EXAMEN\s*:/i.test(line)) {
+        result.title = line.replace(/^EXAMEN\s*:\s*/i, '').trim();
+
+      } else if (/^TIEMPO\s*:/i.test(line)) {
+        result.time_limit = parseInt(line.replace(/^TIEMPO\s*:\s*/i, '')) || null;
+
+      } else if (/^INSTRUCCIONES\s*:/i.test(line)) {
+        result.instructions = line.replace(/^INSTRUCCIONES\s*:\s*/i, '').trim();
+
+      } else if (/^P\s*\d+\s*[.\-:]/i.test(line)) {
+        if (currentQ) result.questions.push(this._finalizarPregunta(currentQ));
+        currentQ = {
+          question_text: line.replace(/^P\s*\d+\s*[.\-:]\s*/i, '').trim(),
+          type:          'short',
+          options:       [],
+          _rawCorrect:   '',
+          points:        1,
+        };
+
+      } else if (/^[a-d]\)\s+/i.test(line) && currentQ) {
+        currentQ.type = 'multiple';
+        currentQ.options.push(line.replace(/^[a-d]\)\s+/i, '').trim());
+
+      } else if (/^CORRECTA\s*:/i.test(line) && currentQ) {
+        currentQ._rawCorrect = line.replace(/^CORRECTA\s*:\s*/i, '').trim();
+
+      } else if (/^PUNTOS?\s*:/i.test(line) && currentQ) {
+        currentQ.points = parseFloat(
+          line.replace(/^PUNTOS?\s*:\s*/i, '').replace(',', '.')
+        ) || 1;
+
+      } else if (currentQ && line.length > 0 && !currentQ.question_text) {
+        currentQ.question_text = line;
+      }
+    }
+
+    if (currentQ) result.questions.push(this._finalizarPregunta(currentQ));
+    return result;
+  },
+
+  _finalizarPregunta(q) {
+    const raw = (q._rawCorrect || '').trim();
+
+    if (q.type === 'multiple' && q.options.length > 0) {
+      if (/^[a-d]$/i.test(raw)) {
+        const idx = raw.toLowerCase().charCodeAt(0) - 97;
+        q.correct_answer = q.options[idx] ?? raw;
+      } else {
+        q.correct_answer = raw;
+      }
+    } else if (/^(verdadero|falso|true|false)$/i.test(raw)) {
+      q.type = 'truefalse';
+      q.correct_answer = /^(verdadero|true)$/i.test(raw) ? 'Verdadero' : 'Falso';
+    } else {
+      q.type = 'short';
+      q.correct_answer = raw;
+    }
+
+    delete q._rawCorrect;
+    return q;
+  },
+
+  // ── Preview de importación ────────────────────────────────
+
+  _renderPreviewImport() {
+    const datos = this._importData;
+    const typeLabel = { multiple: 'Múltiple', truefalse: 'V / F', short: 'Corta' };
+
+    const qRows = datos.questions.map((p, i) => {
+      const opts = p.type === 'multiple'
+        ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+             ${p.options.map((o, oi) => {
+               const isCorrect = o === p.correct_answer;
+               return `<span style="padding:3px 10px;border-radius:6px;font-size:.8rem;
+                 background:${isCorrect ? 'rgba(34,197,94,.15)' : 'var(--bg-base)'};
+                 border:1px solid ${isCorrect ? 'var(--success)' : 'var(--border)'};
+                 color:${isCorrect ? 'var(--success)' : 'var(--text-2)'}">
+                 ${'abcd'[oi]}) ${o}
+               </span>`;
+             }).join('')}
+           </div>`
+        : '';
+
+      return `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:.68rem;font-weight:700;color:var(--text-3);min-width:24px;padding-top:2px">#${i + 1}</span>
+          <div style="flex:1;min-width:0">
+            <div style="margin-bottom:4px">
+              <span class="badge badge-inactive" style="font-size:.65rem">${typeLabel[p.type]}</span>
+              <span style="font-size:.72rem;color:var(--accent);margin-left:6px">${p.points} pt</span>
+            </div>
+            <div style="font-size:.875rem;color:var(--text-1);margin-bottom:6px">${p.question_text}</div>
+            ${opts}
+            ${p.type !== 'multiple'
+              ? `<div style="font-size:.78rem;color:var(--text-3);margin-top:6px">Correcta: <strong style="color:var(--accent)">${p.correct_answer || '—'}</strong></div>`
+              : `<div style="font-size:.78rem;color:var(--text-3);margin-top:4px">Correcta: <strong style="color:var(--success)">${p.correct_answer}</strong></div>`}
+          </div>
+          <button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="ProfesorExamenes._eliminarPreguntaPreview(${i})">✕</button>
+        </div>`;
+    }).join('');
+
+    const totalPts = datos.questions.reduce((s, q) => s + (Number(q.points) || 0), 0);
+
+    document.getElementById('exam-import-count').textContent =
+      `${datos.questions.length} pregunta${datos.questions.length !== 1 ? 's' : ''} detectadas · ${totalPts} puntos en total`;
+
+    document.getElementById('exam-import-body').innerHTML = `
+      <!-- Encabezado editable -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px">
+        <div style="display:grid;grid-template-columns:1fr 140px;gap:14px;margin-bottom:12px">
+          <div class="form-group" style="margin:0">
+            <label>Título del examen</label>
+            <input type="text" id="imp-titulo" value="${datos.title || ''}" placeholder="Título del examen">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Tiempo (min)</label>
+            <input type="number" id="imp-tiempo" value="${datos.time_limit || ''}" placeholder="—" min="1">
+          </div>
+        </div>
+        ${datos.instructions
+          ? `<div style="font-size:.82rem;color:var(--text-3);font-style:italic">Instrucciones: ${datos.instructions}</div>`
+          : ''}
+        <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="imp-practica" style="width:auto">
+          <label for="imp-practica" style="text-transform:none;font-size:.875rem;cursor:pointer">Es examen de práctica (sin nota, repetible)</label>
+        </div>
+      </div>
+
+      <!-- Lista de preguntas -->
+      <div id="imp-preguntas-list">${qRows}</div>
+
+      <!-- Advertencia si no hay título -->
+      <div id="imp-warn" style="display:none;color:var(--danger);font-size:.85rem;margin-top:12px">
+        ⚠ El título es obligatorio para crear el examen.
+      </div>`;
+  },
+
+  _eliminarPreguntaPreview(idx) {
+    if (!this._importData) return;
+    this._importData.questions.splice(idx, 1);
+    this._renderPreviewImport();
+  },
+
+  async _crearDesdeImport() {
+    const btn   = document.getElementById('exam-import-save');
+    const title = document.getElementById('imp-titulo')?.value.trim();
+
+    if (!title) {
+      document.getElementById('imp-warn').style.display = 'block';
+      return;
+    }
+
+    const preguntas = this._importData?.questions || [];
+    if (!preguntas.length) { Utils.toast('No hay preguntas para guardar.', 'error'); return; }
+
+    const time_limit   = parseInt(document.getElementById('imp-tiempo')?.value) || null;
+    const instructions = this._importData.instructions || null;
+    const is_practice  = document.getElementById('imp-practica')?.checked || false;
+
+    Utils.btnLoading(btn, true);
+
+    // 1. Crear el examen
+    const { data: exam, error: examErr } = await sb.from('exams').insert({
+      subject_id: ProfesorState.materia.id,
+      title,
+      time_limit: is_practice ? null : time_limit,
+      instructions,
+      is_practice,
+    }).select().single();
+
+    if (examErr) {
+      Utils.btnLoading(btn, false);
+      Utils.toast('Error al crear examen: ' + examErr.message, 'error');
+      return;
+    }
+
+    // 2. Insertar todas las preguntas
+    const payload = preguntas.map((p, i) => ({
+      exam_id:       exam.id,
+      order_num:     i + 1,
+      type:          p.type,
+      question_text: p.question_text,
+      correct_answer: p.correct_answer,
+      points:        p.points || 1,
+      options:       p.type === 'multiple' ? p.options : null,
+    }));
+
+    const { error: qErr } = await sb.from('exam_questions').insert(payload);
+    Utils.btnLoading(btn, false);
+
+    if (qErr) {
+      Utils.toast('Examen creado pero error al guardar preguntas: ' + qErr.message, 'error');
+    } else {
+      Utils.toast(`Examen creado con ${preguntas.length} preguntas.`);
+    }
+
+    this._cerrarImport();
+    this.init();
+  },
+
+  _cerrarImport() {
+    document.getElementById('exam-import-overlay').style.display = 'none';
+    this._importData = null;
   },
 };
