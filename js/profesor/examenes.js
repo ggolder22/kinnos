@@ -611,41 +611,104 @@ const ProfesorExamenes = {
   //  IMPORTAR EXAMEN DESDE ARCHIVO (PDF / Word)
   // ════════════════════════════════════════════════════════
 
-  descargarPlantilla() {
-    const tpl = `EXAMEN: Parcial 1 — Circuitos Eléctricos
-TIEMPO: 60
-INSTRUCCIONES: Leé cada pregunta con atención. En las de opción múltiple marcá una sola respuesta.
+  _PROMPT_IA: `Necesito que generes un examen para importar a la plataforma educativa Kinnos.
+Usá EXACTAMENTE el siguiente formato (no cambies los marcadores en mayúsculas):
 
-P1. ¿Cuál es la unidad de medida de la resistencia eléctrica?
-a) Ampere (A)
-b) Voltio (V)
-c) Ohm (Ω)
-d) Watt (W)
+EXAMEN: [Título del examen]
+TIEMPO: [duración en minutos]
+INSTRUCCIONES: [instrucciones para los alumnos]
+
+P1. [enunciado de la pregunta de opción múltiple]
+a) [primera opción]
+b) [segunda opción]
+c) [tercera opción]
+d) [cuarta opción]
 CORRECTA: c
 PUNTOS: 1
 
-P2. La ley de Ohm establece que la tensión es igual a la corriente multiplicada por la resistencia.
+P2. [afirmación para responder verdadero o falso]
 CORRECTA: Verdadero
 PUNTOS: 1
 
-P3. Enumerá las leyes de Kirchhoff y explicá brevemente cada una.
-CORRECTA: Ley de corrientes (nodos): la suma de corrientes que entran a un nodo es igual a la suma de las que salen. Ley de tensiones (mallas): la suma algebraica de tensiones en una malla cerrada es cero.
-PUNTOS: 3
-
-P4. Calculá la corriente que circula por un circuito con una resistencia de 10 Ω y una tensión de 220 V.
-CORRECTA: 22 A
+P3. [pregunta de respuesta corta]
+CORRECTA: [respuesta esperada]
 PUNTOS: 2
-`;
-    const blob = new Blob([tpl], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'plantilla-examen-kinnos.txt';
-    a.click();
+
+Reglas que debés respetar sin excepción:
+- Para opción múltiple: CORRECTA debe tener solo la letra (a, b, c o d)
+- Para verdadero/falso: CORRECTA debe ser exactamente "Verdadero" o "Falso"
+- Para respuesta corta: no pongas opciones, solo CORRECTA con la respuesta esperada
+- No agregues texto extra, explicaciones ni numeración fuera del formato
+- Cada pregunta termina con CORRECTA: y opcionalmente PUNTOS:
+
+---
+Mis instrucciones para el examen:
+[escribí acá: materia, tema, cantidad y tipo de preguntas, nivel de dificultad, año/curso, etc.]`,
+
+  copiarPromptIA() {
+    navigator.clipboard.writeText(this._PROMPT_IA).then(() => {
+      Utils.toast('Prompt copiado. Pegalo en ChatGPT, Claude o la IA que uses.');
+      const btn = document.getElementById('btn-copiar-prompt');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copiado';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      }
+    }).catch(() => {
+      // Fallback para navegadores sin clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = this._PROMPT_IA;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      Utils.toast('Prompt copiado.');
+    });
   },
 
   importarDesdeArchivo() {
+    document.getElementById('exam-import-overlay').style.display = 'flex';
+    document.getElementById('exam-import-save').style.display    = 'none';
+    document.getElementById('exam-import-count').textContent     = '';
+    this._mostrarGuia();
+  },
+
+  _mostrarGuia() {
+    document.getElementById('exam-import-body').innerHTML = `
+      <div style="max-width:600px;margin:0 auto;text-align:center;padding:12px 0 32px">
+
+        <div style="font-size:2.5rem;margin-bottom:16px">🤖</div>
+        <h3 style="color:var(--text-1);margin-bottom:10px;font-size:1.1rem">Creá el examen con cualquier IA</h3>
+        <p style="color:var(--text-2);font-size:.9rem;margin-bottom:28px;line-height:1.65">
+          Copiá el prompt, pegalo en <strong>ChatGPT, Claude, Gemini</strong> o cualquier asistente de IA.<br>
+          Agregá tus instrucciones (materia, temas, cantidad de preguntas, dificultad).<br>
+          La IA genera el examen en el formato que Kinnos puede leer automáticamente.
+        </p>
+
+        <button id="btn-copiar-prompt" class="btn btn-primary" style="min-width:220px;margin-bottom:12px"
+          onclick="ProfesorExamenes.copiarPromptIA()">
+          📋 Copiar prompt para la IA
+        </button>
+
+        <div style="color:var(--text-3);font-size:.78rem;margin-bottom:32px">
+          El prompt incluye el formato exacto y las reglas para que la IA no cometa errores.
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:28px">
+          <p style="color:var(--text-3);font-size:.82rem;margin-bottom:16px">
+            ¿Ya tenés el archivo generado por la IA?<br>
+            Guardalo como <strong>.txt, .pdf o .docx</strong> y subilo acá:
+          </p>
+          <button class="btn btn-ghost" onclick="ProfesorExamenes._elegirArchivo()">
+            📂 Elegir archivo
+          </button>
+        </div>
+      </div>`;
+  },
+
+  _elegirArchivo() {
     const input = document.createElement('input');
-    input.type = 'file';
+    input.type  = 'file';
     input.accept = '.pdf,.doc,.docx,.txt';
     input.onchange = e => { if (e.target.files[0]) this._procesarArchivo(e.target.files[0]); };
     input.click();
@@ -834,6 +897,7 @@ PUNTOS: 2
   // ── Preview de importación ────────────────────────────────
 
   _renderPreviewImport() {
+    document.getElementById('exam-import-save').style.display = '';
     const datos = this._importData;
     const typeLabel = { multiple: 'Múltiple', truefalse: 'V / F', short: 'Corta' };
 
