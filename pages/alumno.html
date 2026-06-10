@@ -149,7 +149,10 @@
 <div id="exam-overlay">
   <div class="exam-overlay-header">
     <h2 id="exam-overlay-titulo"></h2>
-    <button class="btn btn-ghost btn-sm" onclick="AlumnoExamenes.cerrarOverlay()">✕ Salir</button>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="exam-timer" class="exam-timer"></span>
+      <button class="btn btn-ghost btn-sm" onclick="AlumnoExamenes.cerrarOverlay()">✕ Salir</button>
+    </div>
   </div>
 
   <div class="exam-body">

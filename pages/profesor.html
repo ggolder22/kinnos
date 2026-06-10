@@ -325,10 +325,103 @@
       <label>Instrucciones para el alumno</label>
       <textarea id="exam-modal-instruc" rows="3" placeholder="Leé cada pregunta con atención…"></textarea>
     </div>
+    <div class="form-group">
+      <label>PDF del enunciado (opcional)</label>
+      <div id="exam-pdf-actual" style="display:none;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <span style="color:var(--text-3)">Actual:</span>
+        <a id="exam-pdf-link" href="#" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <span id="exam-pdf-nombre"></span>
+        </a>
+      </div>
+      <input type="file" id="exam-modal-pdf-file" accept=".pdf,application/pdf" style="font-size:.85rem">
+      <small style="color:var(--text-3)">Los alumnos podrán verlo durante el examen.</small>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="ProfesorExamenes.closeModal()">Cancelar</button>
       <button class="btn btn-primary" id="exam-modal-save" onclick="ProfesorExamenes.save()">Guardar</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal: Preguntas del examen -->
+<div class="modal-backdrop hidden" id="exam-pregs-modal">
+  <div class="modal" style="max-width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 id="exam-pregs-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Preguntas</h4>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.cerrarPreguntas()">✕</button>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.abrirPreguntaForm()">+ Agregar pregunta</button>
+    </div>
+
+    <!-- Formulario nueva pregunta -->
+    <div id="exampreg-form" class="hidden" style="background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="exampreg-type" onchange="ProfesorExamenes._togglePregType()">
+          <option value="multiple">Múltiple opción</option>
+          <option value="truefalse">Verdadero / Falso</option>
+          <option value="short">Respuesta corta</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Enunciado *</label>
+        <textarea id="exampreg-texto" rows="3" placeholder="Escribí la pregunta…"></textarea>
+      </div>
+      <div id="exampreg-opciones-row" class="form-group">
+        <label>Opciones (una por línea — incluí la correcta)</label>
+        <textarea id="exampreg-opciones" rows="4" placeholder="Opción A&#10;Opción B&#10;Opción C&#10;Opción D"></textarea>
+      </div>
+      <div id="exampreg-vf-hint" style="display:none;font-size:.8rem;color:var(--text-3);margin-bottom:12px">
+        La respuesta correcta debe ser exactamente <strong>Verdadero</strong> o <strong>Falso</strong>.
+      </div>
+      <div id="exampreg-short-hint" style="display:none;font-size:.8rem;color:var(--text-3);margin-bottom:12px">
+        La app compara sin distinción de mayúsculas. El docente puede corregir manualmente respuestas que sean esencialmente correctas.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 100px;gap:12px">
+        <div class="form-group">
+          <label>Respuesta correcta *</label>
+          <input type="text" id="exampreg-correcta" placeholder="Ej: Opción A · Verdadero · texto exacto…">
+        </div>
+        <div class="form-group">
+          <label>Puntos</label>
+          <input type="number" id="exampreg-points" value="1" min="0.5" step="0.5">
+        </div>
+      </div>
+      <div class="modal-actions" style="padding:0;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('exampreg-form').classList.add('hidden')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="exampreg-save" onclick="ProfesorExamenes.guardarPregunta()">Agregar</button>
+      </div>
+    </div>
+
+    <!-- Lista de preguntas -->
+    <div id="exam-pregs-body" style="max-height:420px;overflow-y:auto"></div>
+
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="ProfesorExamenes.cerrarPreguntas()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Resultados del examen -->
+<div class="modal-backdrop hidden" id="exam-res-modal">
+  <div class="modal" style="max-width:720px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 id="exam-res-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Resultados</h4>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.cerrarResultados()">✕</button>
+    </div>
+
+    <!-- Lista de resultados -->
+    <div id="exam-res-list">
+      <div id="exam-res-body" style="max-height:460px;overflow-y:auto"></div>
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="btn btn-ghost" onclick="ProfesorExamenes.cerrarResultados()">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- Vista de revisión individual (oculta por defecto) -->
+    <div id="exam-revision-view" class="hidden"></div>
   </div>
 </div>
 

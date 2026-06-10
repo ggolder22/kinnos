@@ -293,12 +293,24 @@
 }
 .short-input:focus { border-color: var(--accent); }
 
+/* ── Timer de examen ── */
+.exam-timer {
+  font-size: .95rem;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: .05em;
+  min-width: 52px;
+  text-align: right;
+  color: var(--accent);
+  transition: color .3s;
+}
+
 /* ── Resultado del examen ── */
 .result-overlay {
   text-align: center; padding: 48px 24px;
 }
 .result-score {
-  font-size: 3.5rem; font-weight: 700; margin-bottom: 8px;
+  font-size: 3.5rem; font-weight: 700; margin-bottom: 8px; line-height: 1;
 }
 .result-score.aprobado { color: var(--success); }
 .result-score.desaprobado { color: var(--danger); }
