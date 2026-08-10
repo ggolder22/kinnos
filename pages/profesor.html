@@ -379,6 +379,15 @@
       <div id="exampreg-short-hint" style="display:none;font-size:.8rem;color:var(--text-3);margin-bottom:12px">
         La app compara sin distinción de mayúsculas. El docente puede corregir manualmente respuestas que sean esencialmente correctas.
       </div>
+      <div class="form-group">
+        <label>Imagen (opcional)</label>
+        <div id="exampreg-img-actual" style="display:none;align-items:center;gap:10px;margin-bottom:8px">
+          <img id="exampreg-img-preview" src="" alt="Vista previa" style="max-width:160px;max-height:110px;border-radius:6px;border:1px solid var(--border)">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="ProfesorExamenes._quitarImagenPregunta()">Quitar</button>
+        </div>
+        <input type="file" id="exampreg-img-file" accept="image/*" style="font-size:.85rem" onchange="ProfesorExamenes._previsualizarImagenPregunta()">
+        <small style="color:var(--text-3)">Ej: foto o diagrama de un circuito para que el alumno lo describa o analice.</small>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 100px;gap:12px">
         <div class="form-group">
           <label>Respuesta correcta *</label>

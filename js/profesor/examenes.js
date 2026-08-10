@@ -229,9 +229,14 @@ const ProfesorExamenes = {
     const rows = preguntas.map(p => {
       const truncated = p.question_text.length > 90
         ? p.question_text.slice(0, 90) + '…' : p.question_text;
+      const imgThumb = p.image_url
+        ? `<img src="${p.image_url}" alt="Imagen de la pregunta" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0">`
+        : '';
+
       return `
         <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
           <span style="font-size:.68rem;font-weight:700;color:var(--text-3);min-width:22px;padding-top:2px">#${p.order_num}</span>
+          ${imgThumb}
           <div style="flex:1;min-width:0">
             <div style="margin-bottom:3px">
               <span class="badge badge-inactive" style="font-size:.65rem">${typeLabel[p.type] || p.type}</span>
@@ -259,8 +264,26 @@ const ProfesorExamenes = {
     document.getElementById('exampreg-correcta').value = '';
     document.getElementById('exampreg-points').value   = '1';
     document.getElementById('exampreg-opciones').value = '';
+    document.getElementById('exampreg-img-file').value = '';
+    document.getElementById('exampreg-img-actual').style.display = 'none';
     this._togglePregType();
     document.getElementById('exampreg-texto').focus();
+  },
+
+  _previsualizarImagenPregunta() {
+    const file = document.getElementById('exampreg-img-file').files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('exampreg-img-preview').src = e.target.result;
+      document.getElementById('exampreg-img-actual').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  },
+
+  _quitarImagenPregunta() {
+    document.getElementById('exampreg-img-file').value = '';
+    document.getElementById('exampreg-img-actual').style.display = 'none';
   },
 
   _togglePregType() {
@@ -298,6 +321,23 @@ const ProfesorExamenes = {
     }
 
     Utils.btnLoading(btn, true);
+
+    const imgFile = document.getElementById('exampreg-img-file').files[0];
+    if (imgFile) {
+      const ext  = imgFile.name.split('.').pop();
+      const path = `exams/${ProfesorState.materia.id}/preguntas/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await sb.storage
+        .from('materiales')
+        .upload(path, imgFile, { contentType: imgFile.type, upsert: true });
+      if (uploadError) {
+        Utils.btnLoading(btn, false);
+        Utils.toast('Error al subir imagen: ' + uploadError.message, 'error');
+        return;
+      }
+      const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
+      payload.image_url = publicUrl;
+    }
+
     const { error } = await sb.from('exam_questions').insert(payload);
     Utils.btnLoading(btn, false);
 
@@ -461,6 +501,9 @@ const ProfesorExamenes = {
       const iColor = isCorrect ? 'var(--success)' : 'var(--danger)';
       const bg     = isCorrect ? 'rgba(34,197,94,.07)' : 'rgba(239,68,68,.07)';
       const border = isCorrect ? 'var(--success)' : 'var(--danger)';
+      const img    = p.image_url
+        ? `<img src="${p.image_url}" alt="Imagen de la pregunta" style="max-width:220px;max-height:160px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;display:block">`
+        : '';
 
       return `
         <div style="background:${bg};border-left:3px solid ${border};padding:11px 14px;border-radius:0 7px 7px 0;margin-bottom:9px">
@@ -470,6 +513,7 @@ const ProfesorExamenes = {
                 #${p.order_num} · ${typeLabel[p.type] || p.type} · ${p.points} pt
               </div>
               <div style="font-size:.85rem;color:var(--text-1);margin-bottom:8px">${p.question_text}</div>
+              ${img}
               <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem">
                 <div><span style="color:var(--text-3)">Alumno: </span><strong>${studentAns}</strong></div>
                 <div><span style="color:var(--text-3)">Correcta: </span><strong style="color:var(--accent)">${p.correct_answer}</strong></div>

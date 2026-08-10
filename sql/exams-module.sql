@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS exam_questions (
                    CHECK (type IN ('multiple', 'truefalse', 'short')),
   options        jsonb,            -- solo para type='multiple': ["Opción A", "Opción B", ...]
   correct_answer text NOT NULL,
-  points         numeric DEFAULT 1
+  points         numeric DEFAULT 1,
+  image_url      text              -- imagen opcional (circuito, diagrama, etc.) mostrada junto al enunciado
 );
+
+-- Si la tabla ya existía antes de agregar soporte de imágenes:
+ALTER TABLE exam_questions ADD COLUMN IF NOT EXISTS image_url text;
 
 -- 3. Tabla exam_results
 CREATE TABLE IF NOT EXISTS exam_results (

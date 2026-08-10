@@ -179,10 +179,15 @@ const AlumnoExamenes = {
         input = `<input class="short-input" id="short_${p.id}" type="text" placeholder="Tu respuesta…">`;
       }
 
+      const img = p.image_url
+        ? `<img src="${p.image_url}" alt="Imagen de la pregunta" style="max-width:100%;max-height:320px;border-radius:8px;border:1px solid var(--border);margin:8px 0;display:block">`
+        : '';
+
       return `
         <div class="pregunta-block">
           <div class="preg-num">Pregunta ${i + 1} de ${this._preguntas.length} · ${p.points} ${p.points == 1 ? 'punto' : 'puntos'}</div>
           <div class="preg-texto">${p.question_text}</div>
+          ${img}
           ${input}
         </div>`;
     }).join('');
@@ -352,6 +357,9 @@ const AlumnoExamenes = {
       const iconColor   = isCorrect ? 'var(--success)' : 'var(--danger)';
       const borderColor = isCorrect ? 'var(--success)' : 'var(--danger)';
       const bg          = isCorrect ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)';
+      const img         = p.image_url
+        ? `<img src="${p.image_url}" alt="Imagen de la pregunta" style="max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;display:block">`
+        : '';
 
       return `
         <div style="background:${bg};border-left:3px solid ${borderColor};padding:12px 14px;border-radius:0 7px 7px 0;margin-bottom:9px">
@@ -359,6 +367,7 @@ const AlumnoExamenes = {
             <div style="flex:1">
               <div style="font-size:.72rem;color:var(--text-3);margin-bottom:4px">#${p.order_num} · ${p.points} pt</div>
               <div style="font-size:.9rem;color:var(--text-1);margin-bottom:8px">${p.question_text}</div>
+              ${img}
               <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem">
                 <div><span style="color:var(--text-3)">Tu respuesta: </span><strong>${studentAns}</strong></div>
                 ${!isCorrect ? `<div><span style="color:var(--text-3)">Correcta: </span><strong style="color:var(--success)">${p.correct_answer}</strong></div>` : ''}
