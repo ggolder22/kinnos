@@ -28,8 +28,12 @@ const AlumnoUnidades = {
         : '';
       const content = u.content
         ? `<div class="unidad-content-text">${this._escapeHtml(u.content)}</div>` : '';
-      const pdf = u.pdf_url
-        ? `<button class="pdf-link" onclick="AlumnoUnidades.openPdf(${JSON.stringify(u.pdf_url).replace(/"/g,'&quot;')},${JSON.stringify(u.title).replace(/"/g,'&quot;')})">📄 Ver PDF</button>` : '';
+      const pdfs = this._pdfListFromItem(u);
+      const pdf = pdfs.length
+        ? `<div style="display:flex;flex-direction:column;gap:4px">${pdfs.map(p =>
+            `<button class="pdf-link" onclick="AlumnoUnidades.openPdf(${JSON.stringify(p.url).replace(/"/g,'&quot;')},${JSON.stringify(p.name || u.title).replace(/"/g,'&quot;')})">📄 ${p.name || 'Ver PDF'}</button>`
+          ).join('')}</div>`
+        : '';
       const ejercBtn = `<button class="btn btn-ghost btn-sm ej-open-btn" onclick="event.stopPropagation();AlumnoEjercicios.abrir('${u.id}',${JSON.stringify(u.title).replace(/"/g,'&quot;')})">Ejercicios</button>`;
       const meta = [u.tag, u.year ? `Año ${u.year}` : null].filter(Boolean).join(' · ');
 
@@ -74,5 +78,12 @@ const AlumnoUnidades = {
 
   _escapeHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  },
+
+  // Soporta unidades viejas con un solo pdf_url y nuevas con pdf_urls (lista)
+  _pdfListFromItem(item) {
+    if (Array.isArray(item?.pdf_urls) && item.pdf_urls.length) return item.pdf_urls;
+    if (item?.pdf_url) return [{ name: item.title, url: item.pdf_url }];
+    return [];
   },
 };

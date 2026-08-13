@@ -37,15 +37,18 @@ const ProfesorUnidades = {
           ${Array.isArray(u.topics) ? u.topics.slice(0,3).join(', ') + (u.topics.length > 3 ? '…' : '') : '—'}
         </td>
         <td>
-          ${u.pdf_url
-            ? `<a href="${u.pdf_url}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Ver PDF</a>`
-            : '<span style="color:var(--text-3);font-size:.8rem">Sin PDF</span>'}
+          ${(() => {
+            const pdfs = this._pdfListFromItem(u);
+            if (!pdfs.length) return '<span style="color:var(--text-3);font-size:.8rem">Sin PDF</span>';
+            if (pdfs.length === 1) return `<a href="${pdfs[0].url}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Ver PDF</a>`;
+            return `<span style="color:var(--text-3);font-size:.8rem">📄 ${pdfs.length} archivos</span>`;
+          })()}
         </td>
         <td>
           <div class="td-actions">
             <button class="btn btn-ghost btn-sm" onclick="ProfesorEjercicios.abrir('${u.id}','${u.title.replace(/'/g, "\\'")}')">Ejercicios</button>
             <button class="btn btn-ghost btn-sm" onclick="ProfesorUnidades.openModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar</button>
-            <button class="btn btn-danger btn-sm" onclick="ProfesorUnidades.delete('${u.id}','${u.title.replace(/'/g, "\\'")}','${u.pdf_url || ''}')">Eliminar</button>
+            <button class="btn btn-danger btn-sm" onclick="ProfesorUnidades.delete('${u.id}','${u.title.replace(/'/g, "\\'")}')">Eliminar</button>
           </div>
         </td>
       </tr>`).join('');
@@ -82,18 +85,34 @@ const ProfesorUnidades = {
     document.getElementById('uni-modal-content').value = item?.content  || '';
     document.getElementById('uni-modal-pdf-file').value = '';
 
-    // Mostrar PDF actual si existe
-    const pdfActual = document.getElementById('uni-pdf-actual');
-    if (item?.pdf_url) {
-      pdfActual.style.display = 'flex';
-      document.getElementById('uni-pdf-nombre').textContent = this._nombreArchivo(item.pdf_url);
-      document.getElementById('uni-pdf-link').href = item.pdf_url;
-    } else {
-      pdfActual.style.display = 'none';
-    }
+    // Lista de PDFs ya cargados (editable dentro del modal)
+    this._modalPdfs = this._pdfListFromItem(item);
+    this._renderPdfList();
 
     document.getElementById('uni-modal').classList.remove('hidden');
     document.getElementById('uni-modal-titulo').focus();
+  },
+
+  // Devuelve [{name, url}, ...] soportando también el viejo campo único pdf_url
+  _pdfListFromItem(item) {
+    if (Array.isArray(item?.pdf_urls) && item.pdf_urls.length) return item.pdf_urls;
+    if (item?.pdf_url) return [{ name: this._nombreArchivo(item.pdf_url), url: item.pdf_url }];
+    return [];
+  },
+
+  _renderPdfList() {
+    const el = document.getElementById('uni-pdf-list');
+    if (!this._modalPdfs.length) { el.innerHTML = ''; return; }
+    el.innerHTML = this._modalPdfs.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <a href="${p.url}" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</a>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ProfesorUnidades._quitarPdfModal(${i})">✕</button>
+      </div>`).join('');
+  },
+
+  _quitarPdfModal(idx) {
+    this._modalPdfs.splice(idx, 1);
+    this._renderPdfList();
   },
 
   closeModal() {
@@ -110,40 +129,41 @@ const ProfesorUnidades = {
       .split('\n').map(t => t.trim()).filter(Boolean);
     const content = document.getElementById('uni-modal-content').value.trim();
     const fileInput = document.getElementById('uni-modal-pdf-file');
-    const file = fileInput.files[0];
+    const files = Array.from(fileInput.files || []);
 
     if (!title || !num) { Utils.toast('Número y título son obligatorios', 'error'); return; }
 
     Utils.btnLoading(btn, true);
 
-    // Subir PDF si se seleccionó uno
-    let pdf_url = null;
-    if (file) {
+    // Subir los PDFs nuevos seleccionados (se agregan a los ya existentes, no los reemplazan)
+    const pdfUrls = [...(this._modalPdfs || [])];
+    for (const file of files) {
       const ext  = file.name.split('.').pop();
-      const path = `${ProfesorState.materia.id}/${Date.now()}.${ext}`;
+      const path = `${ProfesorState.materia.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { data: uploadData, error: uploadError } = await sb.storage
         .from('materiales')
         .upload(path, file, { contentType: file.type, upsert: true });
 
       if (uploadError) {
         Utils.btnLoading(btn, false);
-        Utils.toast('Error al subir el PDF: ' + uploadError.message, 'error');
+        Utils.toast('Error al subir "' + file.name + '": ' + uploadError.message, 'error');
         return;
       }
       const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
-      pdf_url = publicUrl;
+      pdfUrls.push({ name: file.name, url: publicUrl });
     }
 
     const payload = {
       unit_num: num, title, tag: tag || null, topics,
       content: content || null, subject_id: ProfesorState.materia.id,
       updated_at: new Date().toISOString(),
-      ...(pdf_url ? { pdf_url } : {}),  // solo actualiza si subió archivo nuevo
+      pdf_urls: pdfUrls,
+      pdf_url: null, // el campo único queda en desuso; todo vive en pdf_urls
     };
 
     const { error } = id
       ? await sb.from('units').update(payload).eq('id', id)
-      : await sb.from('units').insert({ ...payload, pdf_url });
+      : await sb.from('units').insert(payload);
     Utils.btnLoading(btn, false);
 
     if (error) { Utils.toast('Error al guardar: ' + error.message, 'error'); return; }
@@ -152,14 +172,14 @@ const ProfesorUnidades = {
     this.init();
   },
 
-  async delete(id, title, pdfUrl) {
+  async delete(id, title) {
     if (!await Utils.confirmar(`¿Eliminar la unidad "${title}"?`)) return;
 
-    // Eliminar archivo de Storage si existe
-    if (pdfUrl) {
-      const path = this._pathDesdeUrl(pdfUrl);
-      if (path) await sb.storage.from('materiales').remove([path]);
-    }
+    // Eliminar todos los PDFs de Storage
+    const { data: unit } = await sb.from('units').select('pdf_url, pdf_urls').eq('id', id).single();
+    const pdfs  = this._pdfListFromItem(unit);
+    const paths = pdfs.map(p => this._pathDesdeUrl(p.url)).filter(Boolean);
+    if (paths.length) await sb.storage.from('materiales').remove(paths);
 
     const { error } = await sb.from('units').delete().eq('id', id);
     if (error) { Utils.toast('Error al eliminar: ' + error.message, 'error'); return; }
