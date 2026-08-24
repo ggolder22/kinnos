@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Horarios</title>
+  <link rel="stylesheet" href="../css/horarios.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 32px 20px;
+    }
+    .top-bar {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-bar h1 { color: #f8fafc; font-size: 1.4rem; letter-spacing: -.5px; }
+    .top-bar h1 span { color: #6366f1; }
+    .top-bar a {
+      color: #94a3b8;
+      font-size: .85rem;
+      text-decoration: none;
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+    }
+    .top-bar a:hover { color: #f8fafc; border-color: #6366f1; }
+    .loading { text-align: center; color: #94a3b8; padding: 60px 20px; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>Kin<span>nos</span> · Horarios</h1>
+  <a href="index.html">← Volver al ingreso</a>
+</div>
+
+<div class="horario-wrap">
+  <div class="horario-header" id="horario-header">
+    <h2>Horarios de cursada</h2>
+    <p>Elegí tu curso para ver la grilla semanal.</p>
+  </div>
+
+  <div class="horario-selector" id="horario-selector"></div>
+
+  <div id="horario-body"><div class="loading">Cargando…</div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../config.js"></script>
+<script src="../js/horarios.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  async function init() {
+    const cursos = await Horarios.listarCursos(sb);
+    const body = document.getElementById('horario-body');
+    const selectorEl = document.getElementById('horario-selector');
+
+    if (!cursos.length) {
+      selectorEl.innerHTML = '';
+      body.innerHTML = '<div class="horario-empty-state">Todavía no hay horarios cargados.</div>';
+      return;
+    }
+
+    if (cursos.length > 1) {
+      selectorEl.innerHTML = `
+        <select id="curso-select" onchange="mostrarCurso(this.value)">
+          ${cursos.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>`;
+    }
+
+    await mostrarCurso(cursos[0]);
+  }
+
+  async function mostrarCurso(curso) {
+    const body = document.getElementById('horario-body');
+    body.innerHTML = '<div class="loading">Cargando…</div>';
+
+    const { rows, periodo } = await Horarios.cargar(sb, curso);
+
+    document.getElementById('horario-header').innerHTML = `
+      <h2>${curso}</h2>
+      <p>${periodo || ''}</p>`;
+
+    body.innerHTML = Horarios.renderTabla(rows);
+  }
+
+  init();
+</script>
+
+</body>
+</html>

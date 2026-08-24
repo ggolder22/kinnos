@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════
+   Grilla de horarios — estilos compartidos
+   (usado en pages/horarios.html y dentro de la app del alumno)
+   ═══════════════════════════════════════════════════ */
+
+.horario-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.horario-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.horario-header h2 {
+  color: #f8fafc;
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.horario-header p {
+  color: #94a3b8;
+  font-size: .85rem;
+}
+
+.horario-selector {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.horario-selector select {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: .9rem;
+}
+
+.horario-table-scroll {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+table.horario-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  background: #1e293b;
+}
+
+table.horario-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #334155;
+}
+
+table.horario-table th:last-child { border-right: none; }
+
+table.horario-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #334155;
+  vertical-align: top;
+  font-size: .82rem;
+}
+
+table.horario-table tr:last-child td { border-bottom: none; }
+table.horario-table td:last-child { border-right: none; }
+
+.horario-hora {
+  text-align: center;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: .78rem;
+  white-space: nowrap;
+  background: #0f172a;
+}
+
+.horario-celda-vacia {
+  color: #64748b;
+  font-size: .78rem;
+}
+
+.horario-materia {
+  color: #f8fafc;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.horario-materia.consulta { color: #f59e0b; }
+.horario-materia.consulta .horario-tag { color: #f59e0b; font-weight: 700; }
+
+.horario-profesor {
+  color: #94a3b8;
+  font-size: .76rem;
+}
+
+.horario-empty-state {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 20px;
+  font-size: .9rem;
+}

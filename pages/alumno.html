@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/alumno.css">
+  <link rel="stylesheet" href="../css/horarios.css">
 </head>
 <body>
 
@@ -30,6 +31,9 @@
           Ingresar con código
         </button>
       </div>
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:6px;text-align:left" onclick="AlumnoHorarios.abrir()">
+        🕒 Horarios
+      </button>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
     </nav>
@@ -73,6 +77,10 @@
 
     <div class="page" id="page-examenes">
       <div id="examenes-content"></div>
+    </div>
+
+    <div class="page" id="page-horarios">
+      <div id="horarios-content"></div>
     </div>
 
   </div>
@@ -177,6 +185,8 @@
 <script src="../js/sb.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/utils.js"></script>
+<script src="../js/horarios.js"></script>
+<script src="../js/alumno/horarios.js"></script>
 <script src="../js/alumno/materias.js"></script>
 <script src="../js/alumno/unidades.js"></script>
 <script src="../js/alumno/novedades.js"></script>
