@@ -56,6 +56,7 @@
       <div class="tab" data-tab="unidades"  onclick="showTab('unidades')">Unidades</div>
       <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">Alumnos</div>
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
+      <div class="tab" data-tab="trabajos"  onclick="showTab('trabajos')">Trabajos Prácticos</div>
       <div class="tab" data-tab="novedades"      onclick="showTab('novedades')">Novedades</div>
       <div class="tab" data-tab="planificacion" onclick="showTab('planificacion')">Planificación</div>
     </div>
@@ -78,6 +79,10 @@
 
     <div class="page" id="page-examenes">
       <div id="examenes-content"></div>
+    </div>
+
+    <div class="page" id="page-trabajos">
+      <div id="trabajos-content"></div>
     </div>
 
     <div class="page" id="page-novedades">
@@ -429,6 +434,55 @@
   </div>
 </div>
 
+<!-- Modal: Trabajo Práctico (crear/editar) -->
+<div class="modal-backdrop hidden" id="tp-modal">
+  <div class="modal">
+    <h4 id="tp-modal-title">Nuevo trabajo práctico</h4>
+    <input type="hidden" id="tp-modal-id">
+    <div class="form-group">
+      <label>Título *</label>
+      <input type="text" id="tp-modal-nombre" placeholder="Ej: TP N°1 — Circuitos en serie">
+    </div>
+    <div class="form-group">
+      <label>Consigna / descripción</label>
+      <textarea id="tp-modal-desc" rows="3" placeholder="Instrucciones para el alumno…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Fecha límite de entrega (opcional)</label>
+      <input type="datetime-local" id="tp-modal-fecha">
+    </div>
+    <div class="form-group">
+      <label>PDF del enunciado (opcional)</label>
+      <div id="tp-pdf-actual" style="display:none;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <span style="color:var(--text-3)">Actual:</span>
+        <a id="tp-pdf-link" href="#" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <span id="tp-pdf-nombre"></span>
+        </a>
+      </div>
+      <input type="file" id="tp-modal-pdf-file" accept=".pdf,application/pdf" style="font-size:.85rem">
+      <small style="color:var(--text-3)">Los alumnos podrán descargar la consigna y subir su entrega en PDF.</small>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorTrabajos.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="tp-modal-save" onclick="ProfesorTrabajos.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Entregas del trabajo práctico -->
+<div class="modal-backdrop hidden" id="tp-entregas-modal">
+  <div class="modal" style="max-width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 id="tp-entregas-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Entregas</h4>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorTrabajos.cerrarEntregas()">✕</button>
+    </div>
+    <div id="tp-entregas-body" style="max-height:460px;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="ProfesorTrabajos.cerrarEntregas()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════
      OVERLAY: Importar examen desde archivo
 ════════════════════════════════════════════ -->
@@ -466,6 +520,7 @@
 <script src="../js/profesor/alumnos.js"></script>
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
+<script src="../js/profesor/trabajos.js"></script>
 <script src="../js/profesor/legajo.js"></script>
 <script src="../js/profesor/planificacion.js"></script>
 <script src="../js/profesor/ejercicios_prof.js"></script>
@@ -495,6 +550,7 @@
       unidades:      ProfesorUnidades,
       alumnos:       ProfesorAlumnos,
       examenes:      ProfesorExamenes,
+      trabajos:      ProfesorTrabajos,
       novedades:     ProfesorNovedades,
       planificacion: ProfesorPlanificacion,
     };
