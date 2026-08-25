@@ -58,35 +58,58 @@
 <script>
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+  let combinaciones = [];
+
   async function init() {
-    const cursos = await Horarios.listarCursos(sb);
+    combinaciones = await Horarios.listarCombinaciones(sb);
     const body = document.getElementById('horario-body');
     const selectorEl = document.getElementById('horario-selector');
 
-    if (!cursos.length) {
+    if (!combinaciones.length) {
       selectorEl.innerHTML = '';
       body.innerHTML = '<div class="horario-empty-state">Todavía no hay horarios cargados.</div>';
       return;
     }
 
-    if (cursos.length > 1) {
-      selectorEl.innerHTML = `
-        <select id="curso-select" onchange="mostrarCurso(this.value)">
-          ${cursos.map(c => `<option value="${c}">${c}</option>`).join('')}
-        </select>`;
-    }
+    selectorEl.innerHTML = `
+      <select id="anio-select" onchange="onAnioChange()">
+        ${combinaciones.map(c => `<option value="${c.anio}">${c.anio}°</option>`).join('')}
+      </select>
+      <select id="division-select" onchange="onDivisionChange()"></select>`;
 
-    await mostrarCurso(cursos[0]);
+    onAnioChange();
   }
 
-  async function mostrarCurso(curso) {
+  function onAnioChange() {
+    const anio = parseInt(document.getElementById('anio-select').value);
+    const combo = combinaciones.find(c => c.anio === anio);
+    const divSel = document.getElementById('division-select');
+
+    if (!combo.divisiones.length) {
+      divSel.style.display = 'none';
+      mostrarHorario(anio, null);
+      return;
+    }
+
+    divSel.style.display = '';
+    divSel.innerHTML = combo.divisiones.map(d => `<option value="${d}">${d}</option>`).join('');
+    onDivisionChange();
+  }
+
+  function onDivisionChange() {
+    const anio = parseInt(document.getElementById('anio-select').value);
+    const division = document.getElementById('division-select').value || null;
+    mostrarHorario(anio, division);
+  }
+
+  async function mostrarHorario(anio, division) {
     const body = document.getElementById('horario-body');
     body.innerHTML = '<div class="loading">Cargando…</div>';
 
-    const { rows, periodo } = await Horarios.cargar(sb, curso);
+    const { rows, periodo, curso } = await Horarios.cargar(sb, anio, division);
 
     document.getElementById('horario-header').innerHTML = `
-      <h2>${curso}</h2>
+      <h2>${curso ? curso + ' · ' : ''}${Horarios.etiqueta(anio, division)}</h2>
       <p>${periodo || ''}</p>`;
 
     body.innerHTML = Horarios.renderTabla(rows);

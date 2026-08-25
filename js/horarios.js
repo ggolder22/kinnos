@@ -4,21 +4,38 @@
 const Horarios = {
   DIAS: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 
-  // Devuelve la lista de cursos que tienen horario cargado, ej: ["CENT N° 18 · 1° B"]
-  async listarCursos(sb) {
-    const { data, error } = await sb.from('schedules').select('curso');
+  // Devuelve las combinaciones año/división que tienen horario cargado,
+  // agrupadas por año: [{ anio: 1, divisiones: ['A','B'] }, { anio: 2, divisiones: ['B'] }, ...]
+  async listarCombinaciones(sb) {
+    const { data, error } = await sb.from('schedules').select('anio, division');
     if (error || !data) return [];
-    return [...new Set(data.map(r => r.curso))].sort();
+
+    const porAnio = new Map();
+    data.forEach(r => {
+      if (!porAnio.has(r.anio)) porAnio.set(r.anio, new Set());
+      if (r.division) porAnio.get(r.anio).add(r.division);
+    });
+
+    return [...porAnio.keys()].sort((a, b) => a - b).map(anio => ({
+      anio,
+      divisiones: [...porAnio.get(anio)].sort(),
+    }));
   },
 
-  async cargar(sb, curso) {
-    const { data, error } = await sb
-      .from('schedules')
-      .select('*')
-      .eq('curso', curso)
-      .order('time_start');
-    if (error) return { rows: [], periodo: null };
-    return { rows: data || [], periodo: data?.[0]?.periodo || null };
+  async cargar(sb, anio, division) {
+    let query = sb.from('schedules').select('*').eq('anio', anio).order('time_start');
+    query = division ? query.eq('division', division) : query.is('division', null);
+    const { data, error } = await query;
+    if (error) return { rows: [], periodo: null, curso: null };
+    return {
+      rows: data || [],
+      periodo: data?.[0]?.periodo || null,
+      curso: data?.[0]?.curso || null,
+    };
+  },
+
+  etiqueta(anio, division) {
+    return `${anio}°${division ? ' ' + division : ''}`;
   },
 
   // Arma el HTML de la grilla semanal a partir de las filas de la tabla `schedules`

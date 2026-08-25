@@ -1,5 +1,5 @@
 const AlumnoHorarios = {
-  _cursoActual: null,
+  _combinaciones: [],
 
   abrir() {
     document.getElementById('tabs-bar').classList.add('hidden');
@@ -15,11 +15,10 @@ const AlumnoHorarios = {
     el.innerHTML = '<div class="loading">Cargando…</div>';
     const session = Auth.session();
 
-    const { data: alumno } = await sb.from('students').select('curso').eq('id', session.id).single();
-    this._cursoActual = alumno?.curso || null;
+    const { data: alumno } = await sb.from('students').select('anio, division').eq('id', session.id).single();
 
-    if (this._cursoActual) {
-      await this._mostrarHorario(this._cursoActual);
+    if (alumno?.anio) {
+      await this._mostrarHorario(alumno.anio, alumno.division || null);
     } else {
       await this._mostrarSelector();
     }
@@ -27,9 +26,9 @@ const AlumnoHorarios = {
 
   async _mostrarSelector() {
     const el = document.getElementById('horarios-content');
-    const cursos = await Horarios.listarCursos(sb);
+    this._combinaciones = await Horarios.listarCombinaciones(sb);
 
-    if (!cursos.length) {
+    if (!this._combinaciones.length) {
       el.innerHTML = `<div class="empty-state"><div class="icon">🕒</div><p>Todavía no hay horarios cargados para ningún curso.</p></div>`;
       return;
     }
@@ -41,33 +40,52 @@ const AlumnoHorarios = {
           <p>Elegilo una vez y la próxima vez te va a mostrar tu horario directamente.</p>
         </div>
         <div class="horario-selector">
-          <select id="alumno-curso-select">
-            ${cursos.map(c => `<option value="${c}">${c}</option>`).join('')}
+          <select id="alumno-anio-select" onchange="AlumnoHorarios._onAnioChange()">
+            ${this._combinaciones.map(c => `<option value="${c.anio}">${c.anio}°</option>`).join('')}
           </select>
+          <select id="alumno-division-select"></select>
           <button class="btn btn-primary btn-sm" onclick="AlumnoHorarios._guardarCurso()">Ver mi horario</button>
         </div>
       </div>`;
+
+    this._onAnioChange();
+  },
+
+  _onAnioChange() {
+    const anio = parseInt(document.getElementById('alumno-anio-select').value);
+    const combo = this._combinaciones.find(c => c.anio === anio);
+    const divSel = document.getElementById('alumno-division-select');
+
+    if (!combo.divisiones.length) {
+      divSel.style.display = 'none';
+      divSel.innerHTML = '';
+    } else {
+      divSel.style.display = '';
+      divSel.innerHTML = combo.divisiones.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
   },
 
   async _guardarCurso() {
-    const curso = document.getElementById('alumno-curso-select').value;
+    const anio = parseInt(document.getElementById('alumno-anio-select').value);
+    const divSel = document.getElementById('alumno-division-select');
+    const division = divSel.style.display === 'none' ? null : divSel.value;
+
     const session = Auth.session();
-    const { error } = await sb.from('students').update({ curso }).eq('id', session.id);
+    const { error } = await sb.from('students').update({ anio, division }).eq('id', session.id);
     if (error) { Utils.toast('Error al guardar: ' + error.message, 'error'); return; }
-    this._cursoActual = curso;
-    await this._mostrarHorario(curso);
+    await this._mostrarHorario(anio, division);
   },
 
-  async _mostrarHorario(curso) {
+  async _mostrarHorario(anio, division) {
     const el = document.getElementById('horarios-content');
     el.innerHTML = '<div class="loading">Cargando…</div>';
 
-    const { rows, periodo } = await Horarios.cargar(sb, curso);
+    const { rows, periodo, curso } = await Horarios.cargar(sb, anio, division);
 
     el.innerHTML = `
       <div class="horario-wrap">
         <div class="horario-header">
-          <h2>${curso}</h2>
+          <h2>${curso ? curso + ' · ' : ''}${Horarios.etiqueta(anio, division)}</h2>
           <p>${periodo || ''}</p>
         </div>
         ${Horarios.renderTabla(rows)}
@@ -79,8 +97,7 @@ const AlumnoHorarios = {
 
   async _cambiarCurso() {
     const session = Auth.session();
-    await sb.from('students').update({ curso: null }).eq('id', session.id);
-    this._cursoActual = null;
+    await sb.from('students').update({ anio: null, division: null }).eq('id', session.id);
     this._mostrarSelector();
   },
 };
