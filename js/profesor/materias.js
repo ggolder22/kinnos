@@ -44,7 +44,7 @@ const ProfesorMaterias = {
   async seleccionar(subjectId) {
     const { data: m } = await sb
       .from('subjects')
-      .select('id, name, year, join_code, career_id, careers(name, institutions(name))')
+      .select('id, name, year, join_code, career_id, division, careers(name, institutions(name))')
       .eq('id', subjectId)
       .single();
     if (!m) return;
@@ -54,7 +54,8 @@ const ProfesorMaterias = {
     document.getElementById(`nav-mat-${subjectId}`)?.classList.add('active');
 
     document.getElementById('topbar-materia').textContent = m.name;
-    const sub = [m.careers?.institutions?.name, m.careers?.name, m.year ? `Año ${m.year}` : null]
+    const anioDiv = m.year ? `Año ${m.year}${m.division ? ' · División ' + m.division : ''}` : null;
+    const sub = [m.careers?.institutions?.name, m.careers?.name, anioDiv]
       .filter(Boolean).join(' › ');
     document.getElementById('topbar-sub').textContent = sub;
 

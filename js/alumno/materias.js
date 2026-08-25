@@ -93,10 +93,11 @@ const AlumnoMaterias = {
       return;
     }
 
-    // Materias de esa(s) carrera(s) + inscripciones actuales
-    const [{ data: subjects }, { data: enrolled }] = await Promise.all([
-      sb.from('subjects').select('id, name, year, career_id').in('career_id', careerIds).order('year').order('name'),
+    // Materias de esa(s) carrera(s) + inscripciones actuales + mi propio año/división
+    const [{ data: subjects }, { data: enrolled }, { data: yo }] = await Promise.all([
+      sb.from('subjects').select('id, name, year, division, career_id').in('career_id', careerIds).order('year').order('name'),
       sb.from('student_subjects').select('subject_id').eq('student_id', session.id),
+      sb.from('students').select('anio, division').eq('id', session.id).single(),
     ]);
 
     if (!subjects?.length) {
@@ -106,9 +107,15 @@ const AlumnoMaterias = {
 
     const enrolledIds = new Set((enrolled || []).map(e => e.subject_id));
 
+    // Si ya elegí mi año/división (en Horarios o al registrarme), no muestro materias que sean
+    // exclusivas de la otra división. Si todavía no lo elegí, se ven todas (igual que antes).
+    const misSubjects = (yo?.anio && yo?.division)
+      ? subjects.filter(s => !(s.division && s.year === yo.anio && s.division !== yo.division))
+      : subjects;
+
     // Agrupar por año dentro de la carrera
     const byYear = {};
-    for (const s of subjects) {
+    for (const s of misSubjects) {
       const key = s.year ? `Año ${s.year}` : 'Sin año asignado';
       (byYear[key] = byYear[key] || []).push(s);
     }
@@ -124,7 +131,9 @@ const AlumnoMaterias = {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">${yearLabel}</div>
         ${subs.map(s => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-            <div style="font-weight:500;color:var(--text-1);font-size:.875rem">${s.name}</div>
+            <div style="font-weight:500;color:var(--text-1);font-size:.875rem">
+              ${s.name}${s.division ? ` <span class="badge badge-indigo" style="font-size:.62rem">${s.division}</span>` : ''}
+            </div>
             ${enrolledIds.has(s.id)
               ? '<span class="badge badge-indigo" style="background:rgba(34,197,94,.15);color:#4ade80;border-color:rgba(34,197,94,.3)">Inscripto</span>'
               : `<button class="btn btn-primary btn-sm" onclick="AlumnoMaterias.inscribirse('${s.id}',${JSON.stringify(s.name).replace(/"/g,'&quot;')})">Inscribirme</button>`
@@ -150,11 +159,21 @@ const AlumnoMaterias = {
     if (!codigo) { Utils.toast('Ingresá el código de la materia', 'error'); return; }
 
     const { data: materia } = await sb
-      .from('subjects').select('id, name').eq('join_code', codigo).maybeSingle();
+      .from('subjects').select('id, name, year, division').eq('join_code', codigo).maybeSingle();
 
     if (!materia) { Utils.toast('Código incorrecto. Verificá con tu profesor.', 'error'); return; }
 
     const session = Auth.session();
+
+    // Si la materia es exclusiva de una división, y yo ya elegí la mía, deben coincidir
+    if (materia.division) {
+      const { data: yo } = await sb.from('students').select('anio, division').eq('id', session.id).single();
+      if (yo?.anio && yo?.division && yo.anio === materia.year && yo.division !== materia.division) {
+        Utils.toast(`Este código es para ${materia.year}° ${materia.division}. Vos estás en ${yo.anio}° ${yo.division}.`, 'error');
+        return;
+      }
+    }
+
     const { data: yaInscripto } = await sb
       .from('student_subjects')
       .select('student_id')

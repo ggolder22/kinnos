@@ -68,7 +68,28 @@
           <option value="">Primero seleccioná institución</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Año (opcional)</label>
+        <select id="reg-anio">
+          <option value="">—</option>
+          <option value="1">1°</option>
+          <option value="2">2°</option>
+          <option value="3">3°</option>
+          <option value="4">4°</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>División (opcional)</label>
+        <select id="reg-division">
+          <option value="">—</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
+      </div>
     </div>
+    <p style="color:#64748b;font-size:.75rem;margin:-8px 0 14px">
+      Si tu curso está dividido en A y B, elegilo acá — te va a servir para ver tu horario y las materias que te corresponden. Si no lo sabés, lo podés indicar más adelante.
+    </p>
 
     <button id="btn-registrar" onclick="registrar()">Registrarme</button>
     <div class="error" id="error-msg"></div>
@@ -136,6 +157,8 @@
     const telefono    = document.getElementById('reg-telefono').value.trim();
     const instId      = document.getElementById('reg-inst').value;
     const carreraId   = document.getElementById('reg-carrera').value;
+    const anio        = parseInt(document.getElementById('reg-anio').value) || null;
+    const division    = document.getElementById('reg-division').value || null;
 
     if (!nombre)     { mostrarError('El nombre es obligatorio.'); return; }
     if (!dni)        { mostrarError('El DNI es obligatorio.'); return; }
@@ -155,6 +178,7 @@
     const { error } = await sb.from('students').insert({
       full_name: nombre, dni, email: email || null, phone: telefono || null,
       institution_id: instId, career_id: carreraId,
+      anio, division,
     });
 
     btn.disabled = false;

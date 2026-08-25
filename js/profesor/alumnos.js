@@ -15,6 +15,7 @@ const ProfesorAlumnos = {
 
   _render(data) {
     const el = document.getElementById('alumnos-content');
+    const division = ProfesorState.materia.division;
     const addForm = `
       <div class="card" style="margin-bottom:20px">
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -28,6 +29,18 @@ const ProfesorAlumnos = {
         <p style="font-size:.75rem;color:var(--text-3);margin-top:8px">
           El alumno debe estar registrado en Kinnos para poder inscribirlo.
           El código de la materia es <strong style="color:var(--accent)">${ProfesorState.materia.join_code}</strong>
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <label style="margin:0;font-size:.78rem;color:var(--text-3);text-transform:none;font-weight:400">¿A quién le doy esta materia?</label>
+          <select id="materia-division-select" onchange="ProfesorAlumnos.cambiarDivision(this.value)" style="width:auto;padding:5px 10px">
+            <option value="" ${!division ? 'selected' : ''}>Ambas divisiones (A y B)</option>
+            <option value="A" ${division === 'A' ? 'selected' : ''}>Solo división A</option>
+            <option value="B" ${division === 'B' ? 'selected' : ''}>Solo división B</option>
+          </select>
+        </div>
+        <p style="font-size:.72rem;color:var(--text-3);margin-top:6px">
+          Si elegís una división, solo van a poder inscribirse (por código o desde "Explorar materias")
+          los alumnos que hayan indicado ese mismo año y división en su perfil.
         </p>
       </div>`;
 
@@ -65,6 +78,14 @@ const ProfesorAlumnos = {
           <tbody>${rows}</tbody>
         </table>
       </div>`;
+  },
+
+  async cambiarDivision(value) {
+    const division = value || null;
+    const { error } = await sb.from('subjects').update({ division }).eq('id', ProfesorState.materia.id);
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    ProfesorState.materia.division = division;
+    Utils.toast(division ? `Materia limitada a división ${division}` : 'Materia abierta a ambas divisiones');
   },
 
   async agregarPorDNI() {

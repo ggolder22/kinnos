@@ -251,6 +251,7 @@ const AdminInstitutions = {
       <tr>
         <td class="text-main">${m.name}</td>
         <td>${m.year ? `${m.year}°` : '—'}</td>
+        <td>${m.division ? `<span class="badge badge-indigo">${m.division}</span>` : 'Ambas'}</td>
         <td>${m.despliegue || '—'}</td>
         <td>${m.campo_formacion
               ? `<span class="badge ${this._badgeCampo(m.campo_formacion)}">${m.campo_formacion}</span>`
@@ -270,7 +271,7 @@ const AdminInstitutions = {
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>Espacio curricular</th><th>Año</th><th>Despliegue</th>
+            <th>Espacio curricular</th><th>Año</th><th>División</th><th>Despliegue</th>
             <th>Campo</th><th>Hs/sem</th><th>Hs total</th><th>Código</th><th>Acciones</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -294,6 +295,7 @@ const AdminInstitutions = {
     document.getElementById('materia-modal-name').value            = item?.name            || '';
     document.getElementById('materia-modal-year').value            = item?.year            || '';
     document.getElementById('materia-modal-despliegue').value      = item?.despliegue      || '';
+    document.getElementById('materia-modal-division').value        = item?.division        || '';
     document.getElementById('materia-modal-campo').value           = item?.campo_formacion || '';
     document.getElementById('materia-modal-hs-semana').value       = item?.hs_semana       || '';
     document.getElementById('materia-modal-hs-total').value        = item?.hs_total        || '';
@@ -311,13 +313,14 @@ const AdminInstitutions = {
     const name      = document.getElementById('materia-modal-name').value.trim();
     const year      = parseInt(document.getElementById('materia-modal-year').value) || null;
     const despliegue     = document.getElementById('materia-modal-despliegue').value || null;
+    const division       = document.getElementById('materia-modal-division').value || null;
     const campo_formacion = document.getElementById('materia-modal-campo').value || null;
     const hs_semana = parseInt(document.getElementById('materia-modal-hs-semana').value) || null;
     const hs_total  = parseInt(document.getElementById('materia-modal-hs-total').value)  || null;
     if (!name) { Utils.toast('El nombre es obligatorio', 'error'); return; }
 
     Utils.btnLoading(btn, true);
-    const payload = { name, year, despliegue, campo_formacion, hs_semana, hs_total };
+    const payload = { name, year, despliegue, division, campo_formacion, hs_semana, hs_total };
     let error;
     if (id) {
       ({ error } = await sb.from('subjects').update(payload).eq('id', id));
