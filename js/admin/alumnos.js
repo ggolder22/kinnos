@@ -38,6 +38,7 @@ const AdminAlumnos = {
         <td>${a.dni}</td>
         <td>${a.email || '—'}</td>
         <td>${a.phone || '—'}</td>
+        <td>${a.anio ? `${a.anio}°${a.division ? ' ' + a.division : ''}` : '—'}</td>
         <td>${a.institutions?.name || '<span style="color:var(--danger);font-size:.8rem">Sin institución</span>'}</td>
         <td>
           <div class="td-actions">
@@ -52,7 +53,7 @@ const AdminAlumnos = {
       ${searchBar}
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Institución</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Curso</th><th>Institución</th><th>Acciones</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -76,6 +77,8 @@ const AdminAlumnos = {
     document.getElementById('alumno-modal-dni').value   = item?.dni       || '';
     document.getElementById('alumno-modal-email').value = item?.email     || '';
     document.getElementById('alumno-modal-phone').value = item?.phone     || '';
+    document.getElementById('alumno-modal-anio').value     = item?.anio     || '';
+    document.getElementById('alumno-modal-division').value = item?.division || '';
 
     // Cargar instituciones
     const { data: insts } = await sb.from('institutions').select('id, name').order('name');
@@ -129,6 +132,8 @@ const AdminAlumnos = {
     const phone  = document.getElementById('alumno-modal-phone').value.trim();
     const instId    = document.getElementById('alumno-modal-inst').value;
     const carreraId = document.getElementById('alumno-modal-carrera').value;
+    const anio      = parseInt(document.getElementById('alumno-modal-anio').value) || null;
+    const division  = document.getElementById('alumno-modal-division').value || null;
 
     if (!name || !dni) { Utils.toast('Nombre y DNI son obligatorios', 'error'); return; }
 
@@ -136,6 +141,7 @@ const AdminAlumnos = {
     const payload = {
       full_name: name, dni, email: email || null, phone: phone || null,
       institution_id: instId || null, career_id: carreraId || null,
+      anio, division,
     };
     let error;
     if (id) {

@@ -242,6 +242,26 @@
         <option value="">Primero seleccioná institución</option>
       </select>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Año</label>
+        <select id="alumno-modal-anio">
+          <option value="">—</option>
+          <option value="1">1°</option>
+          <option value="2">2°</option>
+          <option value="3">3°</option>
+          <option value="4">4°</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>División</label>
+        <select id="alumno-modal-division">
+          <option value="">—</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+        </select>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="AdminAlumnos.closeModal()">Cancelar</button>
       <button class="btn btn-primary" id="alumno-modal-save" onclick="AdminAlumnos.save()">Guardar</button>
