@@ -34,6 +34,9 @@
       <button class="btn btn-ghost" style="width:100%;margin-bottom:6px;text-align:left" onclick="AlumnoHorarios.abrir()">
         🕒 Horarios
       </button>
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:6px;text-align:left" onclick="AlumnoBiblioteca.abrir()">
+        📚 Biblioteca
+      </button>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
     </nav>
@@ -62,6 +65,7 @@
       <div class="tab" data-tab="unidades" onclick="showTab('unidades')">Unidades</div>
       <div class="tab" data-tab="examenes" onclick="showTab('examenes')">Exámenes</div>
       <div class="tab" data-tab="trabajos" onclick="showTab('trabajos')">Trabajos Prácticos</div>
+      <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
     </div>
 
     <!-- Bienvenida -->
@@ -82,6 +86,14 @@
 
     <div class="page" id="page-trabajos">
       <div id="trabajos-content"></div>
+    </div>
+
+    <div class="page" id="page-biblioteca">
+      <div id="biblioteca-content"></div>
+    </div>
+
+    <div class="page" id="page-biblioteca-global">
+      <div id="biblioteca-global-content"></div>
     </div>
 
     <div class="page" id="page-horarios">
@@ -197,6 +209,7 @@
 <script src="../js/alumno/novedades.js"></script>
 <script src="../js/alumno/examenes.js"></script>
 <script src="../js/alumno/trabajos.js"></script>
+<script src="../js/alumno/biblioteca.js"></script>
 <script src="../js/alumno/ejercicios.js"></script>
 
 <script>
@@ -227,7 +240,7 @@
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nombre));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${nombre}`).classList.add('active');
-    const modulos = { unidades: AlumnoUnidades, examenes: AlumnoExamenes, trabajos: AlumnoTrabajos };
+    const modulos = { unidades: AlumnoUnidades, examenes: AlumnoExamenes, trabajos: AlumnoTrabajos, biblioteca: AlumnoBiblioteca };
     modulos[nombre]?.init();
   }
 

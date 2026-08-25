@@ -26,6 +26,9 @@
       </div>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
+      <div class="nav-item" id="nav-biblioteca" onclick="ProfesorBiblioteca.abrirGlobal()">
+        <span class="icon">📚</span> Biblioteca
+      </div>
       <div class="nav-section" style="margin-top:8px">Mi cuenta</div>
       <div class="nav-item" id="nav-legajo" onclick="ProfesorLegajo.abrir()">
         <span class="icon">📋</span> Mi Legajo
@@ -57,6 +60,7 @@
       <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">Alumnos</div>
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
       <div class="tab" data-tab="trabajos"  onclick="showTab('trabajos')">Trabajos Prácticos</div>
+      <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
       <div class="tab" data-tab="novedades"      onclick="showTab('novedades')">Novedades</div>
       <div class="tab" data-tab="planificacion" onclick="showTab('planificacion')">Planificación</div>
     </div>
@@ -83,6 +87,14 @@
 
     <div class="page" id="page-trabajos">
       <div id="trabajos-content"></div>
+    </div>
+
+    <div class="page" id="page-biblioteca">
+      <div id="biblioteca-content"></div>
+    </div>
+
+    <div class="page" id="page-biblioteca-global">
+      <div id="biblioteca-global-content"></div>
     </div>
 
     <div class="page" id="page-novedades">
@@ -483,6 +495,76 @@
   </div>
 </div>
 
+<!-- Modal: Recurso de biblioteca (crear/editar) -->
+<div class="modal-backdrop hidden" id="bib-modal">
+  <div class="modal">
+    <h4 id="bib-modal-title">Nuevo recurso</h4>
+    <input type="hidden" id="bib-modal-id">
+    <div class="form-group">
+      <label>Título *</label>
+      <input type="text" id="bib-modal-nombre" placeholder="Ej: Manual de instalaciones eléctricas">
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="bib-modal-desc" rows="2" placeholder="Opcional…"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Categoría</label>
+        <input type="text" id="bib-modal-categoria" placeholder="Ej: Manuales, Normativa…">
+      </div>
+      <div class="form-group">
+        <label>Visible para</label>
+        <select id="bib-modal-carrera"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tipo *</label>
+      <select id="bib-modal-type" onchange="ProfesorBiblioteca._toggleTipo()">
+        <option value="pdf">Documento (PDF)</option>
+        <option value="video">Video (link de YouTube/Vimeo)</option>
+        <option value="link">Link externo</option>
+      </select>
+    </div>
+    <div id="bib-row-pdf" class="form-group">
+      <label>Archivo PDF</label>
+      <div id="bib-pdf-actual" style="display:none;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <span style="color:var(--text-3)">Actual:</span>
+        <a id="bib-pdf-link" href="#" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <span id="bib-pdf-nombre"></span>
+        </a>
+      </div>
+      <input type="file" id="bib-modal-pdf-file" accept=".pdf,application/pdf" style="font-size:.85rem">
+    </div>
+    <div id="bib-row-video" class="form-group">
+      <label>Link del video</label>
+      <input type="text" id="bib-modal-video" placeholder="https://www.youtube.com/watch?v=…">
+    </div>
+    <div id="bib-row-link" class="form-group">
+      <label>URL del recurso</label>
+      <input type="text" id="bib-modal-link" placeholder="https://…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorBiblioteca.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="bib-modal-save" onclick="ProfesorBiblioteca.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Vincular recurso existente a la materia -->
+<div class="modal-backdrop hidden" id="bib-vincular-modal">
+  <div class="modal" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 style="margin:0">Vincular recurso de la biblioteca</h4>
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorBiblioteca.cerrarVincular()">✕</button>
+    </div>
+    <div id="bib-vincular-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="ProfesorBiblioteca.cerrarVincular()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════
      OVERLAY: Importar examen desde archivo
 ════════════════════════════════════════════ -->
@@ -521,6 +603,7 @@
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
 <script src="../js/profesor/trabajos.js"></script>
+<script src="../js/profesor/biblioteca.js"></script>
 <script src="../js/profesor/legajo.js"></script>
 <script src="../js/profesor/planificacion.js"></script>
 <script src="../js/profesor/ejercicios_prof.js"></script>
@@ -551,6 +634,7 @@
       alumnos:       ProfesorAlumnos,
       examenes:      ProfesorExamenes,
       trabajos:      ProfesorTrabajos,
+      biblioteca:    ProfesorBiblioteca,
       novedades:     ProfesorNovedades,
       planificacion: ProfesorPlanificacion,
     };
