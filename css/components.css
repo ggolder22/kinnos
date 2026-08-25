@@ -26,6 +26,44 @@
 
 .btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 6px; }
 
+/* ── Tabs bar ── */
+.tabs-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  flex-wrap: wrap;
+}
+.tabs-bar.hidden { display: none; }
+
+.tab {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.tab:hover  { color: var(--text-1); background: var(--bg-hover); border-color: var(--border); }
+.tab.active { color: #fff; background: var(--accent); }
+.tab.active:hover { background: var(--accent-h); }
+
+@media (max-width: 768px) {
+  .tabs-bar {
+    padding: 10px 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+  .tab { white-space: nowrap; }
+}
+
 /* ── Card ── */
 .card {
   background: var(--bg-card);

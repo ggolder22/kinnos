@@ -1,37 +1,4 @@
-/* ── Tabs bar ── */
-.tabs-bar {
-  display: flex;
-  gap: 0;
-  padding: 0 32px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-card);
-}
-.tabs-bar.hidden { display: none; }
-
-.tab {
-  padding: 14px 22px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  cursor: pointer;
-  transition: color 0.15s;
-  user-select: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-.tab:hover  { color: var(--text-1); }
-.tab.active { color: var(--text-1); font-weight: 600; border-bottom-color: var(--accent); }
-
-@media (max-width: 768px) {
-  .tabs-bar {
-    padding: 0 16px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tab { white-space: nowrap; }
-}
+/* Tabs bar (.tabs-bar / .tab) — movido a components.css para que lo compartan profesor y alumno */
 
 /* ── Topbar materia info ── */
 .topbar-sub {
