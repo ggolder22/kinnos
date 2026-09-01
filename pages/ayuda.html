@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinnos — Ayuda</title>
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<style>
+  body { background: var(--bg-base); color: var(--text-1); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  .top-bar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; background: var(--bg-card); border-bottom: 1px solid var(--border);
+  }
+  .top-bar h1 { font-size: 1.2rem; letter-spacing: -.5px; }
+  .top-bar h1 span { color: var(--accent); }
+  .top-bar a { color: var(--text-3); font-size: .85rem; text-decoration: none; }
+  .top-bar a:hover { color: var(--text-1); }
+
+  .layout { max-width: 900px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  .roles { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .role-btn {
+    padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text-2); font-weight: 600; font-size: .85rem;
+    cursor: pointer; transition: all .15s;
+  }
+  .role-btn:hover { color: var(--text-1); border-color: var(--accent); }
+  .role-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .intro { color: var(--text-2); font-size: .9rem; line-height: 1.6; margin-bottom: 24px; }
+
+  .acc-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: var(--bg-card); }
+  .acc-head {
+    display: flex; align-items: center; gap: 10px; padding: 14px 18px; cursor: pointer;
+    font-weight: 600; font-size: .92rem; user-select: none;
+  }
+  .acc-head:hover { background: var(--bg-hover); }
+  .acc-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .acc-chevron { margin-left: auto; color: var(--text-3); transition: transform .15s; flex-shrink: 0; }
+  .acc-item.open .acc-chevron { transform: rotate(90deg); }
+  .acc-body { display: none; padding: 0 18px 18px 46px; color: var(--text-2); font-size: .87rem; line-height: 1.7; }
+  .acc-item.open .acc-body { display: block; }
+  .acc-body h4 { color: var(--text-1); font-size: .85rem; margin: 14px 0 6px; }
+  .acc-body h4:first-child { margin-top: 0; }
+  .acc-body ul, .acc-body ol { margin: 4px 0 10px 18px; }
+  .acc-body li { margin-bottom: 4px; }
+  .acc-body strong { color: var(--text-1); }
+  .acc-body code {
+    background: var(--bg-base); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 6px; font-size: .82em; color: var(--accent);
+  }
+  .tip {
+    margin-top: 10px; padding: 10px 12px; background: rgba(99,102,241,.08);
+    border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; font-size: .84rem;
+  }
+
+  .search-box { margin-bottom: 20px; }
+  .search-box input {
+    width: 100%; padding: 11px 14px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-1); font-size: .9rem; outline: none; box-sizing: border-box;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>Kin<span>nos</span> · Centro de ayuda</h1>
+  <a href="index.html" id="volver-link">← Volver al inicio</a>
+</div>
+
+<div class="layout">
+  <div class="roles" id="roles"></div>
+  <div class="search-box">
+    <input type="text" id="search" placeholder="Buscar en la ayuda (ej: examen, PDF, código, división)…" oninput="filtrar(this.value)">
+  </div>
+  <div class="intro" id="intro"></div>
+  <div id="secciones"></div>
+</div>
+
+<script>
+const CONTENIDO = {
+  alumno: {
+    label: '🎓 Alumno',
+    intro: 'Guía para alumnos: cómo inscribirte en materias, ver el contenido, rendir exámenes, entregar trabajos y usar la biblioteca y los proyectos grupales.',
+    secciones: [
+      { icon: '🔑', title: 'Ingresar y registrarme', body: `
+        <h4>Si ya estás registrado</h4>
+        <ul>
+          <li>Entrá a Kinnos e ingresá tu <strong>número de DNI</strong>, sin puntos.</li>
+          <li>El sistema te reconoce automáticamente y te lleva a tu panel de Alumno.</li>
+        </ul>
+        <h4>Si es tu primera vez</h4>
+        <ol>
+          <li>Tocá <strong>"¿Alumno nuevo? Registrate"</strong> en la pantalla de ingreso.</li>
+          <li>Completá tu nombre, DNI, email y teléfono (email y teléfono son opcionales).</li>
+          <li>Elegí tu institución y tu carrera.</li>
+          <li>Si tu curso está dividido en <strong>A y B</strong>, elegí tu año y división — te va a servir para ver tu horario y que te aparezcan las materias correctas. Si no lo sabés todavía, lo podés dejar en blanco y elegirlo después.</li>
+          <li>Listo — ya podés ingresar con tu DNI.</li>
+        </ol>
+      `},
+      { icon: '📚', title: 'Inscribirme en materias', body: `
+        <ul>
+          <li><strong>Con un código:</strong> escribilo en el cuadro "Tengo un código…" del menú y tocá "Ingresar con código". El profesor te lo pasa.</li>
+          <li><strong>Sin código:</strong> tocá <strong>"+ Explorar materias"</strong> para ver todas las materias de tu carrera y sumarte con un botón.</li>
+        </ul>
+        <div class="tip">Si una materia es exclusiva de una división (ej: solo 1° B), no te va a aparecer ni te va a dejar anotarte con el código si vos indicaste que sos de otra división. Revisá tu año/división desde "🕒 Horarios" si algo no te aparece.</div>
+      `},
+      { icon: '📖', title: 'Unidades', body: `
+        <p>Dentro de cada materia, la pestaña <strong>Unidades</strong> muestra los temas cargados por el profesor: contenido de texto, temas y, si el profesor subió, uno o varios <strong>PDFs</strong> descargables por unidad.</p>
+        <p>Cada unidad puede tener también <strong>Ejercicios</strong> de práctica (autocorregidos al instante) — el botón está al lado de cada unidad.</p>
+      `},
+      { icon: '📝', title: 'Exámenes', body: `
+        <h4>Tipos de examen</h4>
+        <ul>
+          <li><strong>Práctica:</strong> sin nota, sin límite de tiempo, podés repetirlo las veces que quieras.</li>
+          <li><strong>Formal:</strong> tiene nota y puede tener tiempo límite. Se rinde <strong>una sola vez</strong>.</li>
+        </ul>
+        <h4>Cómo rendir</h4>
+        <ol>
+          <li>Entrá a la pestaña <strong>Exámenes</strong> de la materia y tocá "Rendir" o "Practicar".</li>
+          <li>Respondé cada pregunta — algunas pueden tener una imagen (ej: un circuito) para analizar.</li>
+          <li>Al enviar un examen formal, tu resultado queda <strong>"⏳ En revisión"</strong> hasta que el profesor lo corrija y libere la nota.</li>
+        </ol>
+      `},
+      { icon: '📎', title: 'Trabajos Prácticos', body: `
+        <p>En la pestaña <strong>Trabajos Prácticos</strong> vas a ver la consigna que subió el profesor (y el PDF del enunciado, si hay uno) con la fecha límite.</p>
+        <ol>
+          <li>Elegí tu archivo PDF con "Seleccionar archivo".</li>
+          <li>Tocá <strong>"Entregar PDF"</strong>.</li>
+          <li>Si te equivocaste de archivo, podés usar <strong>"Reemplazar entrega"</strong> mientras el profesor no lo haya revisado todavía.</li>
+        </ol>
+        <p>Cuando el profesor lo corrija vas a ver la nota y sus observaciones ahí mismo.</p>
+      `},
+      { icon: '📚', title: 'Biblioteca', body: `
+        <p>Hay dos bibliotecas:</p>
+        <ul>
+          <li><strong>📚 Biblioteca</strong> (botón del menú lateral): catálogo general de tu institución/carrera — manuales, videos, links.</li>
+          <li><strong>Biblioteca de la materia</strong> (pestaña dentro de cada materia): solo los recursos que el profesor vinculó a esa materia puntual.</li>
+        </ul>
+        <p>Tocá <strong>"Ver"</strong> para abrir un recurso, y <strong>"Marcar completado"</strong> cuando termines de verlo/leerlo — así el profesor puede ver tu avance.</p>
+      `},
+      { icon: '🛠️', title: 'Proyectos grupales', body: `
+        <p>Para materias con trabajo en grupo (ej: prototipos, proyectos finales).</p>
+        <h4>Sumarte a un grupo</h4>
+        <ul>
+          <li>En la pestaña <strong>Proyectos</strong>, elegís <strong>crear tu propio grupo</strong> o <strong>unirte a uno existente</strong> de tus compañeros.</li>
+        </ul>
+        <h4>La bitácora</h4>
+        <p>Es el "diario" del proyecto: subís mensajes, fotos y videos del avance, y el profesor te va dejando devoluciones ahí mismo. Todo queda ordenado por fecha.</p>
+        <div class="tip">Tu grupo tiene un <strong>código de seguimiento</strong> (ej: <code>PRY-8K3F</code>) que podés compartir para que cualquiera vea el avance del proyecto sin necesidad de tener cuenta en Kinnos — útil para mostrárselo a la familia o a un jurado.</div>
+      `},
+      { icon: '🕒', title: 'Horarios', body: `
+        <p>Botón <strong>"🕒 Horarios"</strong> del menú lateral. La primera vez te va a pedir que elijas tu año y división (ej: 1° B) — después te va a mostrar tu grilla semanal directamente, con materia y profesor de cada horario.</p>
+      `},
+    ],
+  },
+
+  profesor: {
+    label: '👨‍🏫 Profesor',
+    intro: 'Guía para docentes: cómo tomar tus materias, cargar contenido, crear exámenes y trabajos prácticos, gestionar alumnos y usar biblioteca y proyectos.',
+    secciones: [
+      { icon: '🔑', title: 'Ingresar y registrarme', body: `
+        <ul>
+          <li>Si ya estás dado de alta, ingresá con tu <strong>DNI</strong> directamente.</li>
+          <li>Si es tu primera vez, tocá <strong>"¿Sos profesor? Registrate"</strong>. Tu solicitud queda <strong>pendiente de aprobación</strong> del administrador antes de poder entrar.</li>
+        </ul>
+      `},
+      { icon: '📚', title: 'Tomar una materia', body: `
+        <ol>
+          <li>Tocá <strong>"+ Nueva materia"</strong> en el menú lateral.</li>
+          <li>Elegí institución y carrera.</li>
+          <li>Vas a ver las materias del <strong>plan de estudios</strong> (las carga el administrador). Tocá "Tomar" en la que vayas a dictar.</li>
+        </ol>
+        <div class="tip">Si tu carrera no tiene materias cargadas todavía, pedile al administrador que las agregue desde su panel — vos no podés crear materias nuevas desde acá, solo tomarlas.</div>
+      `},
+      { icon: '📖', title: 'Unidades', body: `
+        <p>Pestaña <strong>Unidades</strong>: se cargan desde <strong>Planificación</strong> (definís número, título, etiqueta y temas). Después, desde "Editar" podés agregar contenido de texto y <strong>subir varios PDFs</strong> por unidad (no se reemplazan entre sí, se van acumulando).</p>
+        <p>El botón <strong>"Ejercicios"</strong> de cada unidad te deja cargar ejercicios de práctica autocorregidos (de resolución numérica o de "encontrar el error"), y ver cuántos alumnos los resolvieron y con qué porcentaje de acierto.</p>
+      `},
+      { icon: '👥', title: 'Alumnos', body: `
+        <p>Pestaña <strong>Alumnos</strong> de la materia: lista de inscriptos, con botón para agregar alumnos por DNI (deben estar registrados en Kinnos) y quitarlos.</p>
+        <p>Ahí mismo mostrás el <strong>código de inscripción</strong> de la materia (para que se anoten solos) y podés elegir <strong>a qué división</strong> le das la materia: <em>Ambas</em>, <em>Solo A</em> o <em>Solo B</em>. Esto controla quién puede anotarse.</p>
+      `},
+      { icon: '📝', title: 'Exámenes', body: `
+        <h4>Crear un examen</h4>
+        <ol>
+          <li>Pestaña <strong>Exámenes</strong> → "+ Nuevo examen".</li>
+          <li>Definí título, si es de práctica o formal, tiempo límite e instrucciones. Podés adjuntar un PDF con el enunciado.</li>
+          <li>Entrá a "Preguntas" y cargá cada pregunta: <strong>múltiple opción</strong>, <strong>verdadero/falso</strong> o <strong>respuesta corta</strong>. Podés adjuntarle una <strong>imagen</strong> a cualquier pregunta (por ejemplo, la foto de un circuito para que lo analicen).</li>
+        </ol>
+        <h4>Importar un examen ya armado con IA</h4>
+        <p>Desde "📥 Importar desde archivo" podés copiar un prompt listo para pegar en ChatGPT/Claude/Gemini, pedirle que te arme el examen, y subir el archivo (PDF, Word o .txt) resultante — Kinnos lo lee y arma las preguntas automáticamente.</p>
+        <h4>Corregir</h4>
+        <p>En "Resultados" vas viendo quién entregó. Entrá a "Revisar" para ver cada respuesta, ajustar manualmente si una respuesta corta merece estar bien aunque no coincida exactamente, poner la nota final y observaciones, y <strong>"Confirmar y liberar"</strong> para que el alumno vea su nota.</p>
+      `},
+      { icon: '📎', title: 'Trabajos Prácticos', body: `
+        <p>Pestaña <strong>Trabajos Prácticos</strong> → "+ Nuevo trabajo práctico": título, consigna, PDF del enunciado (opcional) y fecha límite (opcional).</p>
+        <p>En "Entregas" ves los PDFs subidos por cada alumno, con link de descarga, y podés poner <strong>nota</strong> y <strong>observaciones</strong> por entrega.</p>
+      `},
+      { icon: '📚', title: 'Biblioteca', body: `
+        <ul>
+          <li><strong>📚 Biblioteca</strong> (menú lateral): catálogo general de tu institución. Subís PDFs, videos (pegando el link de YouTube/Vimeo) o links externos, y elegís si es para toda la institución o solo una carrera.</li>
+          <li>Dentro de cada materia, pestaña <strong>Biblioteca</strong>: podés <strong>vincular</strong> un recurso que ya existe en el catálogo general, o subir uno nuevo directamente para esa materia.</li>
+        </ul>
+      `},
+      { icon: '🛠️', title: 'Proyectos grupales', body: `
+        <p>Pestaña <strong>Proyectos</strong>: creá grupos de trabajo (o dejá que los alumnos se autoorganicen), asigná integrantes, y seguí la <strong>bitácora</strong> de cada grupo — fotos, videos y mensajes del avance del prototipo.</p>
+        <p>Cuando el proyecto esté terminado, entrá al grupo y cambiá el estado a <strong>"✓ Aprobado"</strong> o <strong>"No aprobado"</strong>.</p>
+        <p>Cada grupo tiene un <strong>código de seguimiento</strong> que podés compartir para que se vea el avance sin necesidad de iniciar sesión.</p>
+      `},
+      { icon: '📢', title: 'Novedades', body: `
+        <p>Tablón de anuncios de la materia — los alumnos lo ven apenas entran. Podés fijar ("pinnear") las novedades más importantes arriba de todo.</p>
+      `},
+      { icon: '🗓️', title: 'Planificación', body: `
+        <p>Acá se define la estructura de unidades de la materia (número, título, etiqueta, temas) antes de cargarles contenido. Es el punto de partida de la pestaña Unidades.</p>
+      `},
+      { icon: '📋', title: 'Mi Legajo', body: `
+        <p>Tus datos personales (nombre, DNI, email, teléfono) — accesible desde el botón ⚙ arriba a la derecha o "Mi Legajo" en el menú.</p>
+      `},
+    ],
+  },
+
+  admin: {
+    label: '🛡️ Administrador',
+    intro: 'Guía para el super admin: instituciones, carreras, plan de estudios, aprobación de profesores y gestión de alumnos.',
+    secciones: [
+      { icon: '🏫', title: 'Instituciones y carreras', body: `
+        <p>Desde <strong>Instituciones</strong> creás cada institución, y dentro de cada una sus <strong>carreras</strong>.</p>
+      `},
+      { icon: '📚', title: 'Plan de estudios (materias)', body: `
+        <p>Entrando a una carrera, pestaña de materias: "+ Nueva materia" para cargar el plan de estudios completo — nombre, año, despliegue (cuatrimestral/anual), campo de formación, horas cátedra.</p>
+        <p>Ahí también definís la <strong>División</strong> de cada materia: <em>Ambas</em> (por defecto), <em>Solo A</em> o <em>Solo B</em> — si tu institución divide los cursos.</p>
+        <p>El <strong>código de inscripción</strong> se genera solo, no hace falta escribirlo.</p>
+      `},
+      { icon: '👨‍🏫', title: 'Profesores', body: `
+        <p>Cuando un profesor se registra desde afuera, aparece acá con estado <strong>"Pendiente"</strong> — tenés que <strong>aprobarlo</strong> para que pueda ingresar (o rechazarlo).</p>
+      `},
+      { icon: '🎓', title: 'Alumnos', body: `
+        <p>Alta, edición y baja de alumnos. Desde acá también podés asignarles directamente <strong>Año y División</strong> (ej: 1° B) sin que el alumno tenga que hacerlo — muy útil para cargar un curso entero de una.</p>
+      `},
+    ],
+  },
+};
+
+let rolActual = 'alumno';
+
+function init() {
+  const params = new URLSearchParams(location.search);
+  const rol = params.get('rol');
+  if (rol && CONTENIDO[rol]) {
+    rolActual = rol;
+    const paginas = { alumno: 'alumno.html', profesor: 'profesor.html', admin: 'admin.html' };
+    const volver = document.getElementById('volver-link');
+    volver.href = paginas[rol];
+    volver.textContent = '← Volver a tu panel';
+  }
+
+  document.getElementById('roles').innerHTML = Object.keys(CONTENIDO).map(r => `
+    <button class="role-btn ${r === rolActual ? 'active' : ''}" id="role-${r}" onclick="cambiarRol('${r}')">${CONTENIDO[r].label}</button>
+  `).join('');
+
+  render();
+}
+
+function cambiarRol(r) {
+  rolActual = r;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('role-' + r).classList.add('active');
+  document.getElementById('search').value = '';
+  render();
+}
+
+function render() {
+  const data = CONTENIDO[rolActual];
+  document.getElementById('intro').textContent = data.intro;
+  document.getElementById('secciones').innerHTML = data.secciones.map((s, i) => `
+    <div class="acc-item" id="acc-${i}">
+      <div class="acc-head" onclick="toggle(${i})">
+        <span class="acc-icon">${s.icon}</span>
+        <span>${s.title}</span>
+        <span class="acc-chevron">›</span>
+      </div>
+      <div class="acc-body">${s.body}</div>
+    </div>`).join('');
+}
+
+function toggle(i) {
+  document.getElementById('acc-' + i).classList.toggle('open');
+}
+
+function filtrar(q) {
+  const lower = q.trim().toLowerCase();
+  document.querySelectorAll('.acc-item').forEach(item => {
+    const texto = item.textContent.toLowerCase();
+    const match = !lower || texto.includes(lower);
+    item.style.display = match ? '' : 'none';
+    if (lower && match) item.classList.add('open');
+    if (!lower) item.classList.remove('open');
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
