@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Seguimiento de Proyecto</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 32px 20px;
+      color: #f8fafc;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .top-bar h1 { font-size: 1.3rem; letter-spacing: -.5px; }
+    .top-bar h1 span { color: #6366f1; }
+    .top-bar a { color: #94a3b8; font-size: .85rem; text-decoration: none; border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; }
+    .top-bar a:hover { color: #f8fafc; border-color: #6366f1; }
+
+    .buscar { display: flex; gap: 8px; margin-bottom: 28px; }
+    .buscar input {
+      flex: 1; padding: 12px 14px; background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; color: #f8fafc; font-size: .95rem; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .buscar button {
+      padding: 12px 20px; background: #6366f1; border: none; border-radius: 8px;
+      color: #fff; font-weight: 600; cursor: pointer;
+    }
+    .buscar button:hover { background: #4f46e5; }
+
+    .loading, .error-msg { text-align: center; color: #94a3b8; padding: 40px 20px; }
+    .error-msg { color: #fca5a5; }
+
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px 22px; margin-bottom: 16px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: .72rem; font-weight: 600; }
+    .badge-progress { background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .badge-approved { background: rgba(34,197,94,.15); color: #86efac; }
+    .badge-not-approved { background: rgba(239,68,68,.15); color: #fca5a5; }
+
+    .update { padding: 12px 14px; border-left: 3px solid #334155; background: #0f172a; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+    .update.profesor { border-left-color: #6366f1; }
+    .update-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: .82rem; }
+    .update-author { font-weight: 600; }
+    .update-date { color: #64748b; font-size: .7rem; }
+    .update-msg { color: #cbd5e1; font-size: .85rem; margin-bottom: 8px; white-space: pre-wrap; }
+    .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
+    .attachments img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
+    .attachments video { width: 160px; height: 90px; border-radius: 6px; border: 1px solid #334155; }
+    .attachments a.file { color: #a5b4fc; font-size: .8rem; text-decoration: none; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top-bar">
+    <h1>Kin<span>nos</span> · Seguimiento</h1>
+    <a href="index.html">← Volver al ingreso</a>
+  </div>
+
+  <div class="buscar">
+    <input type="text" id="code-input" placeholder="Código de seguimiento — Ej: PRY-8K3F" maxlength="12"
+      onkeydown="if(event.key==='Enter') buscar()">
+    <button onclick="buscar()">Ver avance</button>
+  </div>
+
+  <div id="resultado"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../config.js"></script>
+<script>
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  const params = new URLSearchParams(location.search);
+  const codeParam = params.get('code');
+  if (codeParam) {
+    document.getElementById('code-input').value = codeParam;
+    buscar();
+  }
+
+  async function buscar() {
+    const code = document.getElementById('code-input').value.trim().toUpperCase();
+    const el = document.getElementById('resultado');
+    if (!code) { el.innerHTML = '<div class="error-msg">Ingresá un código de seguimiento.</div>'; return; }
+    el.innerHTML = '<div class="loading">Buscando…</div>';
+
+    const { data: grupo } = await sb.from('project_groups')
+      .select('*, subjects(name)').eq('tracking_code', code).maybeSingle();
+
+    if (!grupo) { el.innerHTML = '<div class="error-msg">No se encontró ningún proyecto con ese código.</div>'; return; }
+
+    const [{ data: miembros }, { data: updates }] = await Promise.all([
+      sb.from('project_group_members').select('students(full_name)').eq('group_id', grupo.id),
+      sb.from('project_updates').select('*').eq('group_id', grupo.id).order('created_at', { ascending: false }),
+    ]);
+
+    const statusClass = { in_progress: 'badge-progress', approved: 'badge-approved', not_approved: 'badge-not-approved' };
+    const statusLabel = { in_progress: 'En curso', approved: '✓ Aprobado', not_approved: 'No aprobado' };
+
+    const integrantes = (miembros || []).map(m => m.students?.full_name).filter(Boolean).join(', ') || '—';
+
+    const timeline = (updates || []).length
+      ? updates.map(renderUpdate).join('')
+      : '<div class="loading">Todavía no hay publicaciones.</div>';
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">
+          <div>
+            <div style="font-size:1.15rem;font-weight:700">${grupo.name}</div>
+            <div style="font-size:.78rem;color:#94a3b8;margin-top:2px">${grupo.subjects?.name || ''}</div>
+          </div>
+          <span class="badge ${statusClass[grupo.status]}">${statusLabel[grupo.status]}</span>
+        </div>
+        ${grupo.description ? `<div style="font-size:.85rem;color:#cbd5e1;margin-top:8px">${grupo.description}</div>` : ''}
+        <div style="font-size:.78rem;color:#94a3b8;margin-top:10px">👥 ${integrantes}</div>
+      </div>
+      ${timeline}`;
+  }
+
+  function renderUpdate(u) {
+    const esProfe = u.author_type === 'professor';
+    const attachments = Array.isArray(u.attachments) ? u.attachments : [];
+    const archivos = attachments.map(a => {
+      if ((a.type || '').startsWith('image/')) return `<a href="${a.url}" target="_blank" rel="noopener"><img src="${a.url}" alt="${a.name || ''}"></a>`;
+      if ((a.type || '').startsWith('video/')) return `<video src="${a.url}" controls></video>`;
+      return `<a href="${a.url}" target="_blank" rel="noopener" class="file">📄 ${a.name || 'Archivo'}</a>`;
+    }).join('');
+
+    const fecha = new Date(u.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    return `
+      <div class="update ${esProfe ? 'profesor' : ''}">
+        <div class="update-head">
+          <span class="update-author" style="color:${esProfe ? '#a5b4fc' : '#f8fafc'}">${esProfe ? '👨‍🏫 ' : ''}${u.author_name}</span>
+          <span class="update-date">${fecha}</span>
+        </div>
+        ${u.message ? `<div class="update-msg">${u.message}</div>` : ''}
+        ${archivos ? `<div class="attachments">${archivos}</div>` : ''}
+      </div>`;
+  }
+</script>
+
+</body>
+</html>

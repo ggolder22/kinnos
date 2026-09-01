@@ -61,6 +61,7 @@
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
       <div class="tab" data-tab="trabajos"  onclick="showTab('trabajos')">Trabajos Prácticos</div>
       <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
+      <div class="tab" data-tab="proyectos" onclick="showTab('proyectos')">Proyectos</div>
       <div class="tab" data-tab="novedades"      onclick="showTab('novedades')">Novedades</div>
       <div class="tab" data-tab="planificacion" onclick="showTab('planificacion')">Planificación</div>
     </div>
@@ -95,6 +96,10 @@
 
     <div class="page" id="page-biblioteca-global">
       <div id="biblioteca-global-content"></div>
+    </div>
+
+    <div class="page" id="page-proyectos">
+      <div id="proyectos-content"></div>
     </div>
 
     <div class="page" id="page-novedades">
@@ -565,6 +570,32 @@
   </div>
 </div>
 
+<!-- Modal: Nuevo grupo de proyecto -->
+<div class="modal-backdrop hidden" id="grupo-modal">
+  <div class="modal">
+    <h4>Nuevo grupo de trabajo</h4>
+    <div class="form-group">
+      <label>Nombre del grupo *</label>
+      <input type="text" id="grupo-modal-nombre" placeholder="Ej: Calentador solar de agua">
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="grupo-modal-desc" rows="2" placeholder="Opcional…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorProyectos.closeModalCrear()">Cancelar</button>
+      <button class="btn btn-primary" id="grupo-modal-save" onclick="ProfesorProyectos.crearGrupo()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalle de grupo de proyecto -->
+<div class="modal-backdrop hidden" id="proyecto-detalle-modal">
+  <div class="modal" style="max-width:680px">
+    <div id="proyecto-detalle-body"></div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════
      OVERLAY: Importar examen desde archivo
 ════════════════════════════════════════════ -->
@@ -603,7 +634,9 @@
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
 <script src="../js/profesor/trabajos.js"></script>
+<script src="../js/proyectos.js"></script>
 <script src="../js/profesor/biblioteca.js"></script>
+<script src="../js/profesor/proyectos.js"></script>
 <script src="../js/profesor/legajo.js"></script>
 <script src="../js/profesor/planificacion.js"></script>
 <script src="../js/profesor/ejercicios_prof.js"></script>
@@ -635,6 +668,7 @@
       examenes:      ProfesorExamenes,
       trabajos:      ProfesorTrabajos,
       biblioteca:    ProfesorBiblioteca,
+      proyectos:     ProfesorProyectos,
       novedades:     ProfesorNovedades,
       planificacion: ProfesorPlanificacion,
     };

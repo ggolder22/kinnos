@@ -66,6 +66,7 @@
       <div class="tab" data-tab="examenes" onclick="showTab('examenes')">Exámenes</div>
       <div class="tab" data-tab="trabajos" onclick="showTab('trabajos')">Trabajos Prácticos</div>
       <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
+      <div class="tab" data-tab="proyectos" onclick="showTab('proyectos')">Proyectos</div>
     </div>
 
     <!-- Bienvenida -->
@@ -94,6 +95,10 @@
 
     <div class="page" id="page-biblioteca-global">
       <div id="biblioteca-global-content"></div>
+    </div>
+
+    <div class="page" id="page-proyectos">
+      <div id="proyectos-content"></div>
     </div>
 
     <div class="page" id="page-horarios">
@@ -209,7 +214,9 @@
 <script src="../js/alumno/novedades.js"></script>
 <script src="../js/alumno/examenes.js"></script>
 <script src="../js/alumno/trabajos.js"></script>
+<script src="../js/proyectos.js"></script>
 <script src="../js/alumno/biblioteca.js"></script>
+<script src="../js/alumno/proyectos.js"></script>
 <script src="../js/alumno/ejercicios.js"></script>
 
 <script>
@@ -240,7 +247,7 @@
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nombre));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${nombre}`).classList.add('active');
-    const modulos = { unidades: AlumnoUnidades, examenes: AlumnoExamenes, trabajos: AlumnoTrabajos, biblioteca: AlumnoBiblioteca };
+    const modulos = { unidades: AlumnoUnidades, examenes: AlumnoExamenes, trabajos: AlumnoTrabajos, biblioteca: AlumnoBiblioteca, proyectos: AlumnoProyectos };
     modulos[nombre]?.init();
   }
 
