@@ -40,9 +40,13 @@
 
   <div id="form-container">
     <div class="grid-2">
-      <div class="form-group" style="grid-column:1/-1">
-        <label>Nombre completo *</label>
-        <input type="text" id="reg-nombre" placeholder="Ej: Juan Pérez">
+      <div class="form-group">
+        <label>Nombre/s *</label>
+        <input type="text" id="reg-nombre" placeholder="Ej: Juan">
+      </div>
+      <div class="form-group">
+        <label>Apellido/s *</label>
+        <input type="text" id="reg-apellido" placeholder="Ej: Pérez">
       </div>
       <div class="form-group">
         <label>DNI *</label>
@@ -152,6 +156,7 @@
     errEl.style.display = 'none';
 
     const nombre      = document.getElementById('reg-nombre').value.trim();
+    const apellido    = document.getElementById('reg-apellido').value.trim();
     const dni         = document.getElementById('reg-dni').value.trim();
     const email       = document.getElementById('reg-email').value.trim();
     const telefono    = document.getElementById('reg-telefono').value.trim();
@@ -161,6 +166,7 @@
     const division    = document.getElementById('reg-division').value || null;
 
     if (!nombre)     { mostrarError('El nombre es obligatorio.'); return; }
+    if (!apellido)   { mostrarError('El apellido es obligatorio.'); return; }
     if (!dni)        { mostrarError('El DNI es obligatorio.'); return; }
     if (!instId)     { mostrarError('Seleccioná tu institución.'); return; }
     if (!carreraId)  { mostrarError('Seleccioná tu carrera.'); return; }
@@ -176,7 +182,8 @@
     }
 
     const { error } = await sb.from('students').insert({
-      full_name: nombre, dni, email: email || null, phone: telefono || null,
+      full_name: `${nombre} ${apellido}`, first_name: nombre, last_name: apellido,
+      dni, email: email || null, phone: telefono || null,
       institution_id: instId, career_id: carreraId,
       anio, division,
     });

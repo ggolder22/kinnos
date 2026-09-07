@@ -72,9 +72,19 @@ const AdminAlumnos = {
 
   async openModal(item = null) {
     document.getElementById('alumno-modal-title').textContent = item ? 'Editar alumno' : 'Nuevo alumno';
-    document.getElementById('alumno-modal-id').value    = item?.id        || '';
-    document.getElementById('alumno-modal-name').value  = item?.full_name || '';
+    document.getElementById('alumno-modal-id').value       = item?.id         || '';
+    document.getElementById('alumno-modal-nombre').value   = item?.first_name || '';
+    document.getElementById('alumno-modal-apellido').value = item?.last_name  || '';
     document.getElementById('alumno-modal-dni').value   = item?.dni       || '';
+
+    // Alumno cargado antes de separar nombre/apellido: mostrar aviso con el nombre actual
+    const hint = document.getElementById('alumno-modal-legacy-hint');
+    if (item && !item.first_name && !item.last_name && item.full_name) {
+      hint.style.display = 'block';
+      document.getElementById('alumno-modal-legacy-name').textContent = item.full_name;
+    } else {
+      hint.style.display = 'none';
+    }
     document.getElementById('alumno-modal-email').value = item?.email     || '';
     document.getElementById('alumno-modal-phone').value = item?.phone     || '';
     document.getElementById('alumno-modal-anio').value     = item?.anio     || '';
@@ -95,7 +105,7 @@ const AdminAlumnos = {
     }
 
     document.getElementById('alumno-modal').classList.remove('hidden');
-    document.getElementById('alumno-modal-name').focus();
+    document.getElementById('alumno-modal-nombre').focus();
   },
 
   async onInstChange(preselect = null) {
@@ -124,9 +134,10 @@ const AdminAlumnos = {
   },
 
   async save() {
-    const btn    = document.getElementById('alumno-modal-save');
-    const id     = document.getElementById('alumno-modal-id').value;
-    const name   = document.getElementById('alumno-modal-name').value.trim();
+    const btn      = document.getElementById('alumno-modal-save');
+    const id       = document.getElementById('alumno-modal-id').value;
+    const nombre   = document.getElementById('alumno-modal-nombre').value.trim();
+    const apellido = document.getElementById('alumno-modal-apellido').value.trim();
     const dni    = document.getElementById('alumno-modal-dni').value.trim();
     const email  = document.getElementById('alumno-modal-email').value.trim();
     const phone  = document.getElementById('alumno-modal-phone').value.trim();
@@ -135,11 +146,21 @@ const AdminAlumnos = {
     const anio      = parseInt(document.getElementById('alumno-modal-anio').value) || null;
     const division  = document.getElementById('alumno-modal-division').value || null;
 
-    if (!name || !dni) { Utils.toast('Nombre y DNI son obligatorios', 'error'); return; }
+    // Si es un alumno existente y dejaron nombre/apellido en blanco (porque están
+    // editando otra cosa, ej: el teléfono), no le tocamos el nombre para no perderlo.
+    const existente = id ? this._todos.find(a => a.id === id) : null;
+    const dejaronVacio = !nombre && !apellido;
+
+    if (!id && dejaronVacio) { Utils.toast('Nombre y apellido son obligatorios', 'error'); return; }
+    if (!dni) { Utils.toast('El DNI es obligatorio', 'error'); return; }
 
     Utils.btnLoading(btn, true);
+    const nombrePayload = dejaronVacio && existente
+      ? { full_name: existente.full_name, first_name: existente.first_name, last_name: existente.last_name }
+      : { full_name: `${nombre} ${apellido}`.trim(), first_name: nombre || null, last_name: apellido || null };
+
     const payload = {
-      full_name: name, dni, email: email || null, phone: phone || null,
+      ...nombrePayload, dni, email: email || null, phone: phone || null,
       institution_id: instId || null, career_id: carreraId || null,
       anio, division,
     };
