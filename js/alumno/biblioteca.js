@@ -1,6 +1,13 @@
 const AlumnoBiblioteca = {
   _ICONS: { pdf: '📄', video: '🎥', link: '🔗' },
 
+  // Soporta recursos viejos con un solo file_url y nuevos con file_urls (lista)
+  _pdfListFromItem(item) {
+    if (Array.isArray(item?.file_urls) && item.file_urls.length) return item.file_urls;
+    if (item?.file_url) return [{ name: item.title, url: item.file_url }];
+    return [];
+  },
+
   // ── Vista general (sidebar — toda la institución) ─────────
 
   abrir() {
@@ -70,9 +77,17 @@ const AlumnoBiblioteca = {
 
     const cards = recursos.map(r => {
       const icon = this._ICONS[r.type] || '📄';
-      const url  = r.file_url || r.video_url || r.external_url || '#';
       const p    = progresoPorId[r.id];
       const completado = p?.status === 'completed';
+
+      const archivos = this._pdfListFromItem(r);
+      const verHtml = r.type === 'pdf'
+        ? (archivos.length > 1
+            ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                 ${archivos.map(a => `<a href="${a.url}" target="_blank" rel="noopener" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('')}
+               </div>`
+            : `<a href="${archivos[0]?.url || '#'}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')">Ver</a>`)
+        : `<a href="${r.video_url || r.external_url || '#'}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')">Ver</a>`;
 
       return `
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -83,7 +98,7 @@ const AlumnoBiblioteca = {
             ${r.category ? `<span class="badge badge-indigo" style="font-size:.62rem;margin-top:4px;display:inline-block">${r.category}</span>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-            <a href="${url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')">Ver</a>
+            ${verHtml}
             ${completado
               ? '<span class="badge badge-active" style="font-size:.65rem">✓ Completado</span>'
               : `<button class="btn btn-ghost btn-sm" style="font-size:.7rem" onclick="AlumnoBiblioteca.marcarCompletado('${r.id}')">Marcar completado</button>`}

@@ -82,8 +82,16 @@ const ProfesorBiblioteca = {
 
     const cards = recursos.map(r => {
       const icon = this._ICONS[r.type] || '📄';
-      const url  = r.file_url || r.video_url || r.external_url || '#';
       const alcance = r.career_id ? (r.careers?.name || 'Una carrera') : 'Toda la institución';
+
+      const archivos = this._pdfListFromItem(r);
+      const verHtml = r.type === 'pdf'
+        ? (archivos.length > 1
+            ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                 ${archivos.map(a => `<a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('')}
+               </div>`
+            : `<a href="${archivos[0]?.url || '#'}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver</a>`)
+        : `<a href="${r.video_url || r.external_url || '#'}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver</a>`;
 
       return `
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -96,8 +104,8 @@ const ProfesorBiblioteca = {
               ${global ? alcance : ''}
             </div>
           </div>
-          <div class="td-actions" style="flex-shrink:0">
-            <a href="${url}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver</a>
+          <div class="td-actions" style="flex-shrink:0;align-items:flex-start">
+            ${verHtml}
             ${global
               ? `<button class="btn btn-ghost btn-sm" onclick="ProfesorBiblioteca.openModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">Editar</button>
                  <button class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca.delete('${r.id}','${r.title.replace(/'/g,"\\'")}')">Eliminar</button>`
@@ -130,14 +138,8 @@ const ProfesorBiblioteca = {
       this._careers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     carreraSel.value = item?.career_id || (vincularAMateria ? (ProfesorState.materia.career_id || '') : '');
 
-    const pdfActual = document.getElementById('bib-pdf-actual');
-    if (item?.file_url) {
-      pdfActual.style.display = 'flex';
-      document.getElementById('bib-pdf-link').href          = item.file_url;
-      document.getElementById('bib-pdf-nombre').textContent = this._nombreArchivo(item.file_url);
-    } else {
-      pdfActual.style.display = 'none';
-    }
+    this._modalFiles = this._pdfListFromItem(item);
+    this._renderPdfList();
 
     this._toggleTipo();
     document.getElementById('bib-modal').classList.remove('hidden');
@@ -155,6 +157,28 @@ const ProfesorBiblioteca = {
     document.getElementById('bib-row-link').style.display  = type === 'link'  ? '' : 'none';
   },
 
+  // Devuelve [{name, url}, ...] soportando también el viejo campo único file_url
+  _pdfListFromItem(item) {
+    if (Array.isArray(item?.file_urls) && item.file_urls.length) return item.file_urls;
+    if (item?.file_url) return [{ name: this._nombreArchivo(item.file_url), url: item.file_url }];
+    return [];
+  },
+
+  _renderPdfList() {
+    const el = document.getElementById('bib-pdf-list');
+    if (!this._modalFiles.length) { el.innerHTML = ''; return; }
+    el.innerHTML = this._modalFiles.map((f, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <a href="${f.url}" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</a>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca._quitarPdfModal(${i})">✕</button>
+      </div>`).join('');
+  },
+
+  _quitarPdfModal(idx) {
+    this._modalFiles.splice(idx, 1);
+    this._renderPdfList();
+  },
+
   async save() {
     const btn      = document.getElementById('bib-modal-save');
     const id       = document.getElementById('bib-modal-id').value;
@@ -165,29 +189,31 @@ const ProfesorBiblioteca = {
     const careerId = document.getElementById('bib-modal-carrera').value || null;
     const videoUrl = document.getElementById('bib-modal-video').value.trim();
     const linkUrl  = document.getElementById('bib-modal-link').value.trim();
-    const file     = document.getElementById('bib-modal-pdf-file').files[0];
+    const files    = Array.from(document.getElementById('bib-modal-pdf-file').files || []);
 
     if (!title) { Utils.toast('El título es obligatorio', 'error'); return; }
     if (type === 'video' && !videoUrl) { Utils.toast('Pegá el link del video', 'error'); return; }
     if (type === 'link'  && !linkUrl)  { Utils.toast('Pegá el link del recurso', 'error'); return; }
-    if (type === 'pdf' && !file && !id) { Utils.toast('Subí un archivo PDF', 'error'); return; }
+    if (type === 'pdf' && !files.length && !this._modalFiles.length) { Utils.toast('Subí al menos un archivo PDF', 'error'); return; }
 
     Utils.btnLoading(btn, true);
 
-    let file_url;
-    if (type === 'pdf' && file) {
-      const ext  = file.name.split('.').pop();
-      const path = `biblioteca/${this._institutionId}/${Date.now()}.${ext}`;
-      const { data: uploadData, error: uploadError } = await sb.storage
-        .from('materiales')
-        .upload(path, file, { contentType: file.type, upsert: true });
-      if (uploadError) {
-        Utils.btnLoading(btn, false);
-        Utils.toast('Error al subir el PDF: ' + uploadError.message, 'error');
-        return;
+    const fileUrls = [...this._modalFiles];
+    if (type === 'pdf') {
+      for (const file of files) {
+        const ext  = file.name.split('.').pop();
+        const path = `biblioteca/${this._institutionId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const { data: uploadData, error: uploadError } = await sb.storage
+          .from('materiales')
+          .upload(path, file, { contentType: file.type, upsert: true });
+        if (uploadError) {
+          Utils.btnLoading(btn, false);
+          Utils.toast('Error al subir "' + file.name + '": ' + uploadError.message, 'error');
+          return;
+        }
+        const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
+        fileUrls.push({ name: file.name, url: publicUrl });
       }
-      const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
-      file_url = publicUrl;
     }
 
     const session = Auth.session();
@@ -197,7 +223,8 @@ const ProfesorBiblioteca = {
       career_id: careerId,
       video_url:    type === 'video' ? videoUrl : null,
       external_url: type === 'link'  ? linkUrl  : null,
-      ...(type === 'pdf' && file_url ? { file_url } : {}),
+      file_urls:    type === 'pdf' ? fileUrls : [],
+      file_url:     null, // el campo único queda en desuso; todo vive en file_urls
       ...(id ? {} : { created_by: session.id }),
     };
 
@@ -225,6 +252,12 @@ const ProfesorBiblioteca = {
 
   async delete(id, title) {
     if (!await Utils.confirmar(`¿Eliminar "${title}" de la biblioteca? Se quita de todas las materias donde esté vinculado.`)) return;
+
+    const { data: recurso } = await sb.from('library_resources').select('file_url, file_urls').eq('id', id).single();
+    const archivos = this._pdfListFromItem(recurso);
+    const paths = archivos.map(a => this._pathDesdeUrl(a.url)).filter(Boolean);
+    if (paths.length) await sb.storage.from('materiales').remove(paths);
+
     const { error } = await sb.from('library_resources').delete().eq('id', id);
     if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
     Utils.toast('Recurso eliminado');
@@ -285,5 +318,12 @@ const ProfesorBiblioteca = {
   _nombreArchivo(url) {
     try { return decodeURIComponent(url.split('/').pop().split('?')[0]); }
     catch { return 'archivo.pdf'; }
+  },
+
+  _pathDesdeUrl(url) {
+    try {
+      const match = url.match(/\/materiales\/(.+)/);
+      return match ? match[1] : null;
+    } catch { return null; }
   },
 };
