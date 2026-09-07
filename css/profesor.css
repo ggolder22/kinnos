@@ -21,20 +21,7 @@
   content: '📌 ';
 }
 
-/* ── Legajo ── */
-.legajo-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  color: var(--text-1);
-}
-.legajo-btn-icon {
-  font-size: .8rem;
-  opacity: .45;
-  transition: opacity .15s;
-}
-.legajo-btn:hover .legajo-btn-icon { opacity: 1; }
+/* .legajo-btn / .legajo-btn-icon — movido a components.css para que lo comparta el panel de alumno */
 
 .legajo-profile-card {
   background: var(--bg-card);

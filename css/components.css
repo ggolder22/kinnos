@@ -64,6 +64,21 @@
   .tab { white-space: nowrap; }
 }
 
+/* ── Botón de perfil en el topbar (nombre clickeable, con ícono al pasar el mouse) ── */
+.legajo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+.legajo-btn-icon {
+  font-size: .8rem;
+  opacity: .45;
+  transition: opacity .15s;
+}
+.legajo-btn:hover .legajo-btn-icon { opacity: 1; }
+
 /* ── Card ── */
 .card {
   background: var(--bg-card);

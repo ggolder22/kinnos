@@ -1,51 +1,20 @@
 const AlumnoPerfil = {
   _alumno: null,
 
-  abrir() {
-    document.getElementById('tabs-bar').classList.add('hidden');
-    document.getElementById('topbar-materia').textContent = 'Mi Perfil';
-    document.getElementById('topbar-sub').textContent = '';
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-perfil').classList.add('active');
-    this.init();
-  },
-
-  async init() {
-    const el = document.getElementById('perfil-content');
-    el.innerHTML = '<div class="loading">Cargando…</div>';
+  async abrir() {
     const session = Auth.session();
-
     const { data: alumno, error } = await sb
       .from('students')
-      .select('*, institutions(name), careers(name)')
+      .select('*')
       .eq('id', session.id)
       .single();
 
     if (error || !alumno) { Utils.toast('Error al cargar tu perfil', 'error'); return; }
     this._alumno = alumno;
-    this._render();
+    await this._abrirModal();
   },
 
-  _render() {
-    const a  = this._alumno;
-    const el = document.getElementById('perfil-content');
-    const curso = a.anio ? `${a.anio}°${a.division ? ' ' + a.division : ''}` : 'Sin indicar';
-
-    el.innerHTML = `
-      <div class="page-header"><h3>Mi Perfil</h3></div>
-      <div class="card" style="max-width:520px">
-        <div style="font-size:1.15rem;font-weight:700;color:var(--text-1);margin-bottom:4px">${a.full_name}</div>
-        <div style="font-size:.85rem;color:var(--text-3);line-height:1.7">
-          DNI ${a.dni}<br>
-          ${a.email || 'Sin email'}${a.phone ? ' · ' + a.phone : ''}<br>
-          ${a.institutions?.name || 'Sin institución'}${a.careers?.name ? ' · ' + a.careers.name : ''}<br>
-          Curso: ${curso}
-        </div>
-        <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="AlumnoPerfil.abrirEditar()">Editar perfil</button>
-      </div>`;
-  },
-
-  async abrirEditar() {
+  async _abrirModal() {
     const a = this._alumno;
     document.getElementById('miperfil-nombre').value   = a.first_name || '';
     document.getElementById('miperfil-apellido').value = a.last_name  || '';
@@ -148,6 +117,5 @@ const AlumnoPerfil = {
 
     this.closeEditar();
     Utils.toast('Perfil actualizado');
-    this.init();
   },
 };

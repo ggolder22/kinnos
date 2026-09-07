@@ -37,9 +37,6 @@
       <button class="btn btn-ghost" style="width:100%;margin-bottom:6px;text-align:left" onclick="AlumnoBiblioteca.abrir()">
         📚 Biblioteca
       </button>
-      <button class="btn btn-ghost" style="width:100%;margin-bottom:6px;text-align:left" onclick="AlumnoPerfil.abrir()">
-        👤 Mi Perfil
-      </button>
       <div class="nav-section">Mis Materias</div>
       <div id="sidebar-materias"><div style="padding:12px 20px;font-size:.8rem;color:var(--text-3)">Cargando…</div></div>
     </nav>
@@ -58,7 +55,10 @@
       </div>
       <div class="topbar-right">
         <a href="ayuda.html?rol=alumno" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Ayuda">❓ Ayuda</a>
-        <span id="alumno-greeting"></span>
+        <button class="btn btn-ghost btn-sm legajo-btn" onclick="AlumnoPerfil.abrir()" title="Editar perfil">
+          <span id="alumno-greeting"></span>
+          <span class="legajo-btn-icon">⚙</span>
+        </button>
       </div>
     </div>
 
@@ -107,10 +107,6 @@
 
     <div class="page" id="page-horarios">
       <div id="horarios-content"></div>
-    </div>
-
-    <div class="page" id="page-perfil">
-      <div id="perfil-content"></div>
     </div>
 
   </div>
