@@ -525,27 +525,22 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Tipo *</label>
-      <select id="bib-modal-type" onchange="ProfesorBiblioteca._toggleTipo()">
-        <option value="pdf">Documento (PDF)</option>
-        <option value="video">Video (link de YouTube/Vimeo)</option>
-        <option value="link">Link externo</option>
-      </select>
-    </div>
-    <div id="bib-row-pdf" class="form-group">
-      <label>Archivos PDF</label>
+      <label>Documentos (PDF)</label>
       <div id="bib-pdf-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
       <input type="file" id="bib-modal-pdf-file" accept=".pdf,application/pdf" multiple style="font-size:.85rem">
       <small style="color:var(--text-3)">Podés seleccionar varios archivos a la vez. Se agregan a la lista, no reemplazan a los anteriores.</small>
     </div>
-    <div id="bib-row-video" class="form-group">
-      <label>Link del video</label>
-      <input type="text" id="bib-modal-video" placeholder="https://www.youtube.com/watch?v=…">
+    <div class="form-group">
+      <label>Links (videos, artículos, simuladores…)</label>
+      <div id="bib-links-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="bib-link-nombre" placeholder="Nombre (opcional)" style="flex:1">
+        <input type="text" id="bib-link-url" placeholder="https://…" style="flex:2">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ProfesorBiblioteca._agregarLinkModal()">+ Agregar</button>
+      </div>
+      <small style="color:var(--text-3)">Podés agregar más de uno: cada link se suma a la lista.</small>
     </div>
-    <div id="bib-row-link" class="form-group">
-      <label>URL del recurso</label>
-      <input type="text" id="bib-modal-link" placeholder="https://…">
-    </div>
+    <p style="font-size:.78rem;color:var(--text-3);margin-top:-6px">Cargá al menos un documento o un link.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="ProfesorBiblioteca.closeModal()">Cancelar</button>
       <button class="btn btn-primary" id="bib-modal-save" onclick="ProfesorBiblioteca.save()">Guardar</button>

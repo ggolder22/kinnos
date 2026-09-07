@@ -1,7 +1,6 @@
 const ProfesorBiblioteca = {
   _institutionId: null,
   _careers:       [],
-  _ICONS: { pdf: '📄', video: '🎥', link: '🔗' },
 
   async _institucion() {
     if (this._institutionId) return this._institutionId;
@@ -81,17 +80,15 @@ const ProfesorBiblioteca = {
     }
 
     const cards = recursos.map(r => {
-      const icon = this._ICONS[r.type] || '📄';
       const alcance = r.career_id ? (r.careers?.name || 'Una carrera') : 'Toda la institución';
-
       const archivos = this._pdfListFromItem(r);
-      const verHtml = r.type === 'pdf'
-        ? (archivos.length > 1
-            ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-                 ${archivos.map(a => `<a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('')}
-               </div>`
-            : `<a href="${archivos[0]?.url || '#'}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver</a>`)
-        : `<a href="${r.video_url || r.external_url || '#'}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver</a>`;
+      const enlaces  = this._linksFromItem(r);
+      const icon = archivos.length ? '📄' : (enlaces.some(l => l.type === 'video') ? '🎥' : '🔗');
+
+      const archivosHtml = archivos.map(a =>
+        `<a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('');
+      const enlacesHtml = enlaces.map(l =>
+        `<a href="${l.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.78rem">${l.type === 'video' ? '🎥' : '🔗'} ${l.name || l.url}</a>`).join('');
 
       return `
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -104,12 +101,16 @@ const ProfesorBiblioteca = {
               ${global ? alcance : ''}
             </div>
           </div>
-          <div class="td-actions" style="flex-shrink:0;align-items:flex-start">
-            ${verHtml}
-            ${global
-              ? `<button class="btn btn-ghost btn-sm" onclick="ProfesorBiblioteca.openModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">Editar</button>
-                 <button class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca.delete('${r.id}','${r.title.replace(/'/g,"\\'")}')">Eliminar</button>`
-              : `<button class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca.desvincular('${r.id}','${r.title.replace(/'/g,"\\'")}')">Quitar de la materia</button>`}
+          <div class="td-actions" style="flex-shrink:0;align-items:flex-end;flex-direction:column">
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;margin-bottom:6px">
+              ${archivosHtml}${enlacesHtml}
+            </div>
+            <div style="display:flex;gap:6px">
+              ${global
+                ? `<button class="btn btn-ghost btn-sm" onclick="ProfesorBiblioteca.openModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">Editar</button>
+                   <button class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca.delete('${r.id}','${r.title.replace(/'/g,"\\'")}')">Eliminar</button>`
+                : `<button class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca.desvincular('${r.id}','${r.title.replace(/'/g,"\\'")}')">Quitar de la materia</button>`}
+            </div>
           </div>
         </div>`;
     }).join('');
@@ -128,10 +129,9 @@ const ProfesorBiblioteca = {
     document.getElementById('bib-modal-nombre').value   = item?.title       || '';
     document.getElementById('bib-modal-desc').value     = item?.description || '';
     document.getElementById('bib-modal-categoria').value = item?.category   || '';
-    document.getElementById('bib-modal-type').value     = item?.type        || 'pdf';
-    document.getElementById('bib-modal-video').value    = item?.video_url   || '';
-    document.getElementById('bib-modal-link').value     = item?.external_url || '';
     document.getElementById('bib-modal-pdf-file').value = '';
+    document.getElementById('bib-link-nombre').value    = '';
+    document.getElementById('bib-link-url').value       = '';
 
     const carreraSel = document.getElementById('bib-modal-carrera');
     carreraSel.innerHTML = `<option value="">Toda la institución</option>` +
@@ -139,22 +139,16 @@ const ProfesorBiblioteca = {
     carreraSel.value = item?.career_id || (vincularAMateria ? (ProfesorState.materia.career_id || '') : '');
 
     this._modalFiles = this._pdfListFromItem(item);
+    this._modalLinks = this._linksFromItem(item);
     this._renderPdfList();
+    this._renderLinksList();
 
-    this._toggleTipo();
     document.getElementById('bib-modal').classList.remove('hidden');
     document.getElementById('bib-modal-nombre').focus();
   },
 
   closeModal() {
     document.getElementById('bib-modal').classList.add('hidden');
-  },
-
-  _toggleTipo() {
-    const type = document.getElementById('bib-modal-type').value;
-    document.getElementById('bib-row-pdf').style.display   = type === 'pdf'   ? '' : 'none';
-    document.getElementById('bib-row-video').style.display = type === 'video' ? '' : 'none';
-    document.getElementById('bib-row-link').style.display  = type === 'link'  ? '' : 'none';
   },
 
   // Devuelve [{name, url}, ...] soportando también el viejo campo único file_url
@@ -164,12 +158,21 @@ const ProfesorBiblioteca = {
     return [];
   },
 
+  // Devuelve [{name, url, type}, ...] soportando los viejos campos únicos video_url/external_url
+  _linksFromItem(item) {
+    if (Array.isArray(item?.external_links) && item.external_links.length) return item.external_links;
+    const legacy = [];
+    if (item?.video_url)    legacy.push({ name: item.title, url: item.video_url, type: 'video' });
+    if (item?.external_url) legacy.push({ name: item.title, url: item.external_url, type: 'link' });
+    return legacy;
+  },
+
   _renderPdfList() {
     const el = document.getElementById('bib-pdf-list');
     if (!this._modalFiles.length) { el.innerHTML = ''; return; }
     el.innerHTML = this._modalFiles.map((f, i) => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
-        <a href="${f.url}" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</a>
+        <a href="${f.url}" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${f.name}</a>
         <button type="button" class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca._quitarPdfModal(${i})">✕</button>
       </div>`).join('');
   },
@@ -179,52 +182,78 @@ const ProfesorBiblioteca = {
     this._renderPdfList();
   },
 
+  _renderLinksList() {
+    const el = document.getElementById('bib-links-list');
+    if (!this._modalLinks.length) { el.innerHTML = ''; return; }
+    el.innerHTML = this._modalLinks.map((l, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;font-size:.85rem">
+        <a href="${l.url}" target="_blank" rel="noopener" style="color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${l.type === 'video' ? '🎥' : '🔗'} ${l.name || l.url}
+        </a>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ProfesorBiblioteca._quitarLinkModal(${i})">✕</button>
+      </div>`).join('');
+  },
+
+  _agregarLinkModal() {
+    const nombreInput = document.getElementById('bib-link-nombre');
+    const urlInput    = document.getElementById('bib-link-url');
+    const nombre = nombreInput.value.trim();
+    const url    = urlInput.value.trim();
+    if (!url) { Utils.toast('Pegá una URL primero', 'error'); return; }
+
+    const type = /youtube\.com|youtu\.be|vimeo\.com/i.test(url) ? 'video' : 'link';
+    this._modalLinks.push({ name: nombre || url, url, type });
+    nombreInput.value = '';
+    urlInput.value    = '';
+    this._renderLinksList();
+  },
+
+  _quitarLinkModal(idx) {
+    this._modalLinks.splice(idx, 1);
+    this._renderLinksList();
+  },
+
   async save() {
     const btn      = document.getElementById('bib-modal-save');
     const id       = document.getElementById('bib-modal-id').value;
     const title    = document.getElementById('bib-modal-nombre').value.trim();
     const desc     = document.getElementById('bib-modal-desc').value.trim();
     const categoria = document.getElementById('bib-modal-categoria').value.trim();
-    const type     = document.getElementById('bib-modal-type').value;
     const careerId = document.getElementById('bib-modal-carrera').value || null;
-    const videoUrl = document.getElementById('bib-modal-video').value.trim();
-    const linkUrl  = document.getElementById('bib-modal-link').value.trim();
     const files    = Array.from(document.getElementById('bib-modal-pdf-file').files || []);
 
     if (!title) { Utils.toast('El título es obligatorio', 'error'); return; }
-    if (type === 'video' && !videoUrl) { Utils.toast('Pegá el link del video', 'error'); return; }
-    if (type === 'link'  && !linkUrl)  { Utils.toast('Pegá el link del recurso', 'error'); return; }
-    if (type === 'pdf' && !files.length && !this._modalFiles.length) { Utils.toast('Subí al menos un archivo PDF', 'error'); return; }
+    if (!files.length && !this._modalFiles.length && !this._modalLinks.length) {
+      Utils.toast('Cargá al menos un documento o un link', 'error');
+      return;
+    }
 
     Utils.btnLoading(btn, true);
 
     const fileUrls = [...this._modalFiles];
-    if (type === 'pdf') {
-      for (const file of files) {
-        const ext  = file.name.split('.').pop();
-        const path = `biblioteca/${this._institutionId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-        const { data: uploadData, error: uploadError } = await sb.storage
-          .from('materiales')
-          .upload(path, file, { contentType: file.type, upsert: true });
-        if (uploadError) {
-          Utils.btnLoading(btn, false);
-          Utils.toast('Error al subir "' + file.name + '": ' + uploadError.message, 'error');
-          return;
-        }
-        const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
-        fileUrls.push({ name: file.name, url: publicUrl });
+    for (const file of files) {
+      const ext  = file.name.split('.').pop();
+      const path = `biblioteca/${this._institutionId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const { data: uploadData, error: uploadError } = await sb.storage
+        .from('materiales')
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (uploadError) {
+        Utils.btnLoading(btn, false);
+        Utils.toast('Error al subir "' + file.name + '": ' + uploadError.message, 'error');
+        return;
       }
+      const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
+      fileUrls.push({ name: file.name, url: publicUrl });
     }
 
     const session = Auth.session();
     const payload = {
-      title, description: desc || null, category: categoria || null, type,
+      title, description: desc || null, category: categoria || null,
       institution_id: this._institutionId,
       career_id: careerId,
-      video_url:    type === 'video' ? videoUrl : null,
-      external_url: type === 'link'  ? linkUrl  : null,
-      file_urls:    type === 'pdf' ? fileUrls : [],
-      file_url:     null, // el campo único queda en desuso; todo vive en file_urls
+      file_urls: fileUrls,
+      external_links: this._modalLinks,
+      video_url: null, external_url: null, // los campos únicos quedan en desuso; todo vive en las listas
       ...(id ? {} : { created_by: session.id }),
     };
 
@@ -285,12 +314,15 @@ const ProfesorBiblioteca = {
       return;
     }
 
-    el.innerHTML = disponibles.map(r => `
+    el.innerHTML = disponibles.map(r => {
+      const icon = this._pdfListFromItem(r).length ? '📄' : '🔗';
+      return `
       <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:1.1rem">${this._ICONS[r.type] || '📄'}</div>
+        <div style="font-size:1.1rem">${icon}</div>
         <div style="flex:1;min-width:0;font-size:.85rem;color:var(--text-1)">${r.title}</div>
         <button class="btn btn-primary btn-sm" onclick="ProfesorBiblioteca._vincular('${r.id}')">Vincular</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   },
 
   cerrarVincular() {

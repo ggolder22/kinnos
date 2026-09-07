@@ -1,11 +1,18 @@
 const AlumnoBiblioteca = {
-  _ICONS: { pdf: '📄', video: '🎥', link: '🔗' },
-
   // Soporta recursos viejos con un solo file_url y nuevos con file_urls (lista)
   _pdfListFromItem(item) {
     if (Array.isArray(item?.file_urls) && item.file_urls.length) return item.file_urls;
     if (item?.file_url) return [{ name: item.title, url: item.file_url }];
     return [];
+  },
+
+  // Soporta recursos viejos con video_url/external_url únicos y nuevos con external_links (lista)
+  _linksFromItem(item) {
+    if (Array.isArray(item?.external_links) && item.external_links.length) return item.external_links;
+    const legacy = [];
+    if (item?.video_url)    legacy.push({ name: item.title, url: item.video_url, type: 'video' });
+    if (item?.external_url) legacy.push({ name: item.title, url: item.external_url, type: 'link' });
+    return legacy;
   },
 
   // ── Vista general (sidebar — toda la institución) ─────────
@@ -76,18 +83,17 @@ const AlumnoBiblioteca = {
     (progreso || []).forEach(p => { progresoPorId[p.resource_id] = p; });
 
     const cards = recursos.map(r => {
-      const icon = this._ICONS[r.type] || '📄';
-      const p    = progresoPorId[r.id];
+      const p = progresoPorId[r.id];
       const completado = p?.status === 'completed';
 
       const archivos = this._pdfListFromItem(r);
-      const verHtml = r.type === 'pdf'
-        ? (archivos.length > 1
-            ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-                 ${archivos.map(a => `<a href="${a.url}" target="_blank" rel="noopener" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('')}
-               </div>`
-            : `<a href="${archivos[0]?.url || '#'}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')">Ver</a>`)
-        : `<a href="${r.video_url || r.external_url || '#'}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')">Ver</a>`;
+      const enlaces  = this._linksFromItem(r);
+      const icon = archivos.length ? '📄' : (enlaces.some(l => l.type === 'video') ? '🎥' : '🔗');
+
+      const archivosHtml = archivos.map(a =>
+        `<a href="${a.url}" target="_blank" rel="noopener" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')" style="color:var(--accent);font-size:.78rem">📄 ${a.name}</a>`).join('');
+      const enlacesHtml = enlaces.map(l =>
+        `<a href="${l.url}" target="_blank" rel="noopener" onclick="AlumnoBiblioteca._marcarVisto('${r.id}')" style="color:var(--accent);font-size:.78rem">${l.type === 'video' ? '🎥' : '🔗'} ${l.name || l.url}</a>`).join('');
 
       return `
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -98,7 +104,7 @@ const AlumnoBiblioteca = {
             ${r.category ? `<span class="badge badge-indigo" style="font-size:.62rem;margin-top:4px;display:inline-block">${r.category}</span>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-            ${verHtml}
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${archivosHtml}${enlacesHtml}</div>
             ${completado
               ? '<span class="badge badge-active" style="font-size:.65rem">✓ Completado</span>'
               : `<button class="btn btn-ghost btn-sm" style="font-size:.7rem" onclick="AlumnoBiblioteca.marcarCompletado('${r.id}')">Marcar completado</button>`}
