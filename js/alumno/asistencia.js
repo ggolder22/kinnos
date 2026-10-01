@@ -6,7 +6,7 @@ const AlumnoAsistencia = {
     const el = document.getElementById('asistencia-content');
     el.innerHTML = '<div class="loading">Cargando…</div>';
     const session = Auth.session();
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = Utils.hoyLocal();
 
     const { data: sesionHoy } = await sb
       .from('attendance_sessions').select('*')

@@ -10,7 +10,7 @@ const ProfesorAsistencia = {
   },
 
   _hoy() {
-    return new Date().toISOString().slice(0, 10);
+    return Utils.hoyLocal();
   },
 
   _tabsHtml() {
