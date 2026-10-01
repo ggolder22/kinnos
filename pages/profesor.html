@@ -59,6 +59,7 @@
     <div class="tabs-bar hidden" id="tabs-bar">
       <div class="tab" data-tab="unidades"  onclick="showTab('unidades')">Unidades</div>
       <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">Alumnos</div>
+      <div class="tab" data-tab="asistencia" onclick="showTab('asistencia')">Asistencia</div>
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
       <div class="tab" data-tab="trabajos"  onclick="showTab('trabajos')">Trabajos Prácticos</div>
       <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
@@ -81,6 +82,10 @@
 
     <div class="page" id="page-alumnos">
       <div id="alumnos-content"></div>
+    </div>
+
+    <div class="page" id="page-asistencia">
+      <div id="asistencia-content"></div>
     </div>
 
     <div class="page" id="page-examenes">
@@ -622,7 +627,9 @@
 <script src="../js/utils.js"></script>
 <script src="../js/profesor/materias.js"></script>
 <script src="../js/profesor/unidades.js"></script>
+<script src="../js/asistencia.js"></script>
 <script src="../js/profesor/alumnos.js"></script>
+<script src="../js/profesor/asistencia.js"></script>
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
 <script src="../js/profesor/trabajos.js"></script>
@@ -657,6 +664,7 @@
     const modulos = {
       unidades:      ProfesorUnidades,
       alumnos:       ProfesorAlumnos,
+      asistencia:    ProfesorAsistencia,
       examenes:      ProfesorExamenes,
       trabajos:      ProfesorTrabajos,
       biblioteca:    ProfesorBiblioteca,
