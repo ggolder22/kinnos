@@ -85,17 +85,24 @@ const ProfesorAsistencia = {
     const ventana = Asistencia.ventanaDeHoy(this._horarios);
     const estado = Asistencia.estadoVentana(ventana);
 
-    const bannerMap = {
-      sin_clase: `<div class="card">No hay clase programada hoy (${Asistencia.diaDeHoy()}) para esta materia según el cronograma.</div>`,
-      antes:     `<div class="card">La ventana de asistencia se habilita sola a las <strong>${Asistencia.horaCorta(ventana.start)}</strong> y dura ${Asistencia.VENTANA_MIN} minutos.</div>`,
-      abierta:   `<div class="card" style="border-color:var(--success)">🟢 Ventana abierta — se cierra a las <strong>${Asistencia.horaCorta(ventana.end)}</strong>. Los alumnos ya pueden tildarse solos.</div>`,
-      vencida:   `<div class="card" style="border-color:#f59e0b">La ventana de hoy cerró a las ${Asistencia.horaCorta(ventana.end)}. Quien no se haya marcado figura ausente — podés corregirlo abajo (tardanza avalada por Preceptoría, justificación, etc.).</div>`,
-    };
+    // Ojo: `ventana` es null en el caso "sin_clase" — no se puede armar un objeto
+    // con los 4 mensajes de una, porque JS evalúa todas las propiedades al construirlo
+    // (aunque después solo se use una). Por eso acá se arma solo el mensaje que corresponde.
+    let bannerHtml;
+    if (estado === 'sin_clase') {
+      bannerHtml = `<div class="card">No hay clase programada hoy (${Asistencia.diaDeHoy()}) para esta materia según el cronograma.</div>`;
+    } else if (estado === 'antes') {
+      bannerHtml = `<div class="card">La ventana de asistencia se habilita sola a las <strong>${Asistencia.horaCorta(ventana.start)}</strong> y dura ${Asistencia.VENTANA_MIN} minutos.</div>`;
+    } else if (estado === 'abierta') {
+      bannerHtml = `<div class="card" style="border-color:var(--success)">🟢 Ventana abierta — se cierra a las <strong>${Asistencia.horaCorta(ventana.end)}</strong>. Los alumnos ya pueden tildarse solos.</div>`;
+    } else {
+      bannerHtml = `<div class="card" style="border-color:#f59e0b">La ventana de hoy cerró a las ${Asistencia.horaCorta(ventana.end)}. Quien no se haya marcado figura ausente — podés corregirlo abajo (tardanza avalada por Preceptoría, justificación, etc.).</div>`;
+    }
 
     el.innerHTML = `
       <div class="page-header"><h3>Asistencia</h3></div>
       ${this._tabsHtml()}
-      ${bannerMap[estado]}
+      ${bannerHtml}
       <div style="font-size:.8rem;color:var(--text-3);margin:12px 0">${this._resumenCorto()} · ${Utils.formatDate(hoy)}</div>
       ${this._listaConCorreccion()}`;
   },
