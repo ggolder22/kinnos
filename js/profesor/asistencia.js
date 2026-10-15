@@ -1,22 +1,21 @@
 const ProfesorAsistencia = {
-  _vista:   'hoy',
-  _sesion:  null, // sesión de asistencia de hoy (o null si no existe)
-  _roster:  [],
-  _records: {},   // { student_id: record }
+  _vista:         'hoy',
+  _fecha:         null,
+  _horarios:      [],
+  _roster:        [],
+  _sesion:        null,
+  _records:       {}, // { student_id: record }
+  _institutionId: null,
 
   async init() {
     this._vista = 'hoy';
     await this._render();
   },
 
-  _hoy() {
-    return Utils.hoyLocal();
-  },
-
   _tabsHtml() {
     const tab = (key, label) => `
       <button class="btn ${this._vista === key ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="ProfesorAsistencia.cambiarVista('${key}')">${label}</button>`;
-    return `<div style="display:flex;gap:8px;margin-bottom:16px">${tab('hoy', 'Clase de hoy')}${tab('resumen', 'Resumen')}${tab('historial', 'Historial')}</div>`;
+    return `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tab('hoy', 'Hoy')}${tab('resumen', 'Resumen')}${tab('historial', 'Historial')}${tab('horario', 'Horario')}</div>`;
   },
 
   cambiarVista(v) {
@@ -28,11 +27,19 @@ const ProfesorAsistencia = {
     if (this._vista === 'hoy')       return this._renderHoy();
     if (this._vista === 'resumen')   return this._renderResumen();
     if (this._vista === 'historial') return this._renderHistorial();
+    if (this._vista === 'horario')   return this._renderHorario();
   },
 
-  // ── Cargar roster + sesión + registros de una fecha ───────
+  // ── Cargar roster + horarios + sesión + registros de una fecha ───
+
+  async _cargarHorarios() {
+    const { data } = await sb.from('schedules').select('*')
+      .eq('subject_id', ProfesorState.materia.id).order('day').order('time_start');
+    this._horarios = data || [];
+  },
 
   async _cargar(fecha) {
+    this._fecha = fecha;
     const { data: inscriptos } = await sb
       .from('student_subjects').select('students(id, full_name, dni)').eq('subject_id', ProfesorState.materia.id);
     this._roster = (inscriptos || []).map(r => r.students).filter(Boolean)
@@ -50,21 +57,14 @@ const ProfesorAsistencia = {
     }
   },
 
-  _estaAbierta() {
-    return this._sesion?.status === 'abierta' && new Date() < new Date(this._sesion.closes_at);
-  },
-
-  _ventanaVencida() {
-    return this._sesion?.status === 'abierta' && new Date() >= new Date(this._sesion.closes_at);
-  },
-
-  // ── Clase de hoy: abrir / cerrar / ver en vivo ────────────
+  // ── Hoy: informativo (la ventana la calcula el sistema solo) ─────
 
   async _renderHoy() {
     const el = document.getElementById('asistencia-content');
     el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
 
-    const hoy = this._hoy();
+    const hoy = Utils.hoyLocal();
+    await this._cargarHorarios();
     await this._cargar(hoy);
 
     if (!this._roster.length) {
@@ -73,73 +73,34 @@ const ProfesorAsistencia = {
       return;
     }
 
-    // Caso 1: no hay clase abierta hoy todavía
-    if (!this._sesion || (this._sesion.status === 'cerrada' && !this._sesion.opened_at)) {
-      el.innerHTML = `
-        <div class="page-header"><h3>Asistencia</h3></div>
-        ${this._tabsHtml()}
-        <div class="card" style="max-width:420px">
-          <div style="font-weight:600;color:var(--text-1);margin-bottom:6px">Clase de hoy — ${Utils.formatDate(hoy)}</div>
+    if (!this._horarios.length) {
+      el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}
+        <div class="card" style="max-width:480px">
+          <div style="font-weight:600;color:var(--text-1);margin-bottom:6px">Esta materia no tiene horario vinculado</div>
           <p style="font-size:.85rem;color:var(--text-2);margin-bottom:14px">
-            Al abrir la clase, tus alumnos van a poder tildar su propia asistencia desde la app durante el tiempo que elijas.
+            La ventana de asistencia se calcula a partir del cronograma. Andá a la pestaña <strong>"Horario"</strong> para vincular los días y horarios de esta materia.
           </p>
-          <div class="form-group">
-            <label>Minutos que queda abierta</label>
-            <input type="number" id="asis-minutos" value="15" min="1" max="180" style="width:100px">
-          </div>
-          <button class="btn btn-primary" onclick="ProfesorAsistencia._abrir()">🟢 Abrir asistencia de hoy</button>
+          <button class="btn btn-primary btn-sm" onclick="ProfesorAsistencia.cambiarVista('horario')">Ir a Horario</button>
         </div>`;
       return;
     }
 
-    // Caso 2: la ventana venció pero todavía no se finalizó
-    if (this._ventanaVencida()) {
-      el.innerHTML = `
-        <div class="page-header"><h3>Asistencia</h3></div>
-        ${this._tabsHtml()}
-        <div class="card" style="max-width:460px;border-color:#f59e0b">
-          <div style="font-weight:600;color:var(--text-1);margin-bottom:6px">⏱ La ventana de hoy venció</div>
-          <p style="font-size:.85rem;color:var(--text-2);margin-bottom:14px">
-            Se cerró automáticamente a las ${this._hora(this._sesion.closes_at)}. Finalizá la clase para marcar como ausente
-            a quien no haya tildado su presencia.
-          </p>
-          <button class="btn btn-primary" onclick="ProfesorAsistencia._finalizar()">Finalizar y completar ausentes</button>
-        </div>`;
-      return;
-    }
+    const ventana = Asistencia.ventanaDeHoy(this._horarios);
+    const estado = Asistencia.estadoVentana(ventana);
 
-    // Caso 3: abierta y dentro de la ventana — vista en vivo
-    if (this._estaAbierta()) {
-      el.innerHTML = `
-        <div class="page-header"><h3>Asistencia</h3></div>
-        ${this._tabsHtml()}
-        <div class="card" style="margin-bottom:16px;border-color:var(--success);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div>
-            <div style="font-weight:600;color:var(--success)">🟢 Asistencia abierta</div>
-            <div style="font-size:.8rem;color:var(--text-3)">Se cierra a las ${this._hora(this._sesion.closes_at)} — los alumnos ya pueden tildar su presencia</div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="ProfesorAsistencia._renderHoy()">🔄 Actualizar</button>
-            <button class="btn btn-danger btn-sm" onclick="ProfesorAsistencia._finalizar()">Cerrar ahora</button>
-          </div>
-        </div>
-        ${this._listaConCorreccion()}`;
-      return;
-    }
+    const bannerMap = {
+      sin_clase: `<div class="card">No hay clase programada hoy (${Asistencia.diaDeHoy()}) para esta materia según el cronograma.</div>`,
+      antes:     `<div class="card">La ventana de asistencia se habilita sola a las <strong>${Asistencia.horaCorta(ventana.start)}</strong> y dura ${Asistencia.VENTANA_MIN} minutos.</div>`,
+      abierta:   `<div class="card" style="border-color:var(--success)">🟢 Ventana abierta — se cierra a las <strong>${Asistencia.horaCorta(ventana.end)}</strong>. Los alumnos ya pueden tildarse solos.</div>`,
+      vencida:   `<div class="card" style="border-color:#f59e0b">La ventana de hoy cerró a las ${Asistencia.horaCorta(ventana.end)}. Quien no se haya marcado figura ausente — podés corregirlo abajo (tardanza avalada por Preceptoría, justificación, etc.).</div>`,
+    };
 
-    // Caso 4: ya cerrada (finalizada) — mostrar resultado del día con opción de corregir
     el.innerHTML = `
       <div class="page-header"><h3>Asistencia</h3></div>
       ${this._tabsHtml()}
-      <div class="card" style="margin-bottom:16px">
-        <div style="font-weight:600;color:var(--text-1)">Clase de hoy — ${Utils.formatDate(hoy)} (cerrada)</div>
-        <div style="font-size:.8rem;color:var(--text-3);margin-top:2px">${this._resumenCorto()}</div>
-      </div>
+      ${bannerMap[estado]}
+      <div style="font-size:.8rem;color:var(--text-3);margin:12px 0">${this._resumenCorto()} · ${Utils.formatDate(hoy)}</div>
       ${this._listaConCorreccion()}`;
-  },
-
-  _hora(iso) {
-    return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   },
 
   _resumenCorto() {
@@ -152,7 +113,7 @@ const ProfesorAsistencia = {
     const rows = this._roster.map(a => {
       const rec = this._records[a.id];
       const estadoActual = rec?.status;
-      const autogestion = rec?.marked_by_role === 'student';
+      const quien = { student: 'Se marcó solo', professor: 'Corregido por el docente', system: 'Marcado automáticamente' };
 
       return `
         <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
@@ -160,8 +121,8 @@ const ProfesorAsistencia = {
             <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${a.full_name}</div>
             <div style="font-size:.72rem;color:var(--text-3)">
               ${rec
-                ? `${autogestion ? 'Se marcó solo' : 'Corregido por el docente'} a las ${this._hora(rec.marked_at)}`
-                : 'Todavía no tildó su presencia'}
+                ? `${quien[rec.marked_by_role] || ''}${rec.marked_at ? ' a las ' + Asistencia.horaCorta(new Date(rec.marked_at)) : ''}`
+                : 'Todavía no hay registro'}
             </div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0">
@@ -178,63 +139,27 @@ const ProfesorAsistencia = {
     }).join('');
 
     return `
-      <p style="font-size:.76rem;color:var(--text-3);margin-bottom:8px">
-        Estos botones son para corregir manualmente (tardanza, justificación, o alguien que se olvidó de tildar). El registro normal lo hace el alumno desde su panel.
+      <p style="font-size:.76rem;color:var(--text-3);margin:12px 0 8px">
+        El registro normal lo hace el alumno solo, dentro de la ventana. Estos botones son para corregir manualmente.
       </p>
       <div style="max-height:440px;overflow-y:auto">${rows}</div>`;
   },
 
-  async _abrir() {
-    const minutos = parseInt(document.getElementById('asis-minutos').value) || 15;
+  async _corregir(studentId, status) {
     const session = Auth.session();
-    const ahora = new Date();
-    const cierra = new Date(ahora.getTime() + minutos * 60000);
 
-    const { error } = await sb.from('attendance_sessions').upsert({
-      subject_id: ProfesorState.materia.id,
-      session_date: this._hoy(),
-      status: 'abierta',
-      opened_at: ahora.toISOString(),
-      closes_at: cierra.toISOString(),
-      closed_at: null,
-      created_by: session.id,
-    }, { onConflict: 'subject_id,session_date' });
-
-    if (error) { Utils.toast('Error al abrir la asistencia: ' + error.message, 'error'); return; }
-    Utils.toast(`Asistencia abierta hasta las ${this._hora(cierra.toISOString())}`);
-    this._renderHoy();
-  },
-
-  async _finalizar() {
-    if (!this._sesion) return;
-
-    // Completa como "ausente" a todo inscripto que no haya tildado nada
-    const faltantes = this._roster.filter(a => !this._records[a.id]);
-    if (faltantes.length) {
-      const payload = faltantes.map(a => ({
-        session_id: this._sesion.id,
-        student_id: a.id,
-        status: 'ausente',
-        marked_by_role: 'professor',
-        marked_by: Auth.session().id,
-      }));
-      await sb.from('attendance_records').insert(payload);
+    let sesionId = this._sesion?.id;
+    if (!sesionId) {
+      const { data: sesion, error } = await sb.from('attendance_sessions')
+        .upsert({ subject_id: ProfesorState.materia.id, session_date: this._fecha }, { onConflict: 'subject_id,session_date' })
+        .select().single();
+      if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+      sesionId = sesion.id;
+      this._sesion = sesion;
     }
 
-    const { error } = await sb.from('attendance_sessions')
-      .update({ status: 'cerrada', closed_at: new Date().toISOString() })
-      .eq('id', this._sesion.id);
-
-    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
-    Utils.toast('Clase finalizada');
-    this._renderHoy();
-  },
-
-  async _corregir(studentId, status) {
-    if (!this._sesion) return;
-    const session = Auth.session();
     const { error } = await sb.from('attendance_records').upsert({
-      session_id: this._sesion.id,
+      session_id: sesionId,
       student_id: studentId,
       status,
       marked_by_role: 'professor',
@@ -243,7 +168,53 @@ const ProfesorAsistencia = {
     }, { onConflict: 'session_id,student_id' });
 
     if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    await this._cargar(this._fecha);
     if (this._vista === 'hoy') this._renderHoy();
+    else this._verDiaRefresh();
+  },
+
+  _verDiaRefresh() {
+    const el = document.getElementById('asistencia-content');
+    el.innerHTML = `
+      <div class="page-header"><h3>Asistencia</h3></div>
+      ${this._tabsHtml()}
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="ProfesorAsistencia.cambiarVista('historial')">← Volver al historial</button>
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:600;color:var(--text-1)">${Utils.formatDate(this._fecha)}</div>
+        <div style="font-size:.8rem;color:var(--text-3);margin-top:2px">${this._resumenCorto()}</div>
+      </div>
+      ${this._listaConCorreccion()}`;
+  },
+
+  // ── Completa como "ausente" (marked_by_role: system) a los inscriptos
+  //    que no tengan registro en sesiones cuya ventana ya venció. Se corre
+  //    sola al entrar a Resumen/Historial — nadie tiene que accionarla. ──
+
+  async _backfillVencidas() {
+    const { data: inscriptos } = await sb.from('student_subjects').select('student_id').eq('subject_id', ProfesorState.materia.id);
+    const rosterIds = (inscriptos || []).map(r => r.student_id);
+    if (!rosterIds.length) return;
+
+    await this._cargarHorarios();
+    if (!this._horarios.length) return; // sin cronograma vinculado, no sabemos si venció
+
+    const { data: sesiones } = await sb.from('attendance_sessions').select('id, session_date').eq('subject_id', ProfesorState.materia.id);
+    if (!sesiones?.length) return;
+
+    const ahora = new Date();
+    for (const s of sesiones) {
+      const ventana = Asistencia.ventanaDeFecha(s.session_date, this._horarios);
+      if (!ventana || ahora <= ventana.end) continue;
+
+      const { data: existentes } = await sb.from('attendance_records').select('student_id').eq('session_id', s.id);
+      const yaTienen = new Set((existentes || []).map(r => r.student_id));
+      const faltantes = rosterIds.filter(id => !yaTienen.has(id));
+      if (!faltantes.length) continue;
+
+      await sb.from('attendance_records').insert(
+        faltantes.map(student_id => ({ session_id: s.id, student_id, status: 'ausente', marked_by_role: 'system', marked_by: null }))
+      );
+    }
   },
 
   // ── Resumen con % y semáforo de regularidad ───────────────
@@ -251,6 +222,8 @@ const ProfesorAsistencia = {
   async _renderResumen() {
     const el = document.getElementById('asistencia-content');
     el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
+
+    await this._backfillVencidas();
 
     const { data: inscriptos } = await sb
       .from('student_subjects').select('students(id, full_name, dni)').eq('subject_id', ProfesorState.materia.id);
@@ -310,9 +283,11 @@ const ProfesorAsistencia = {
     const el = document.getElementById('asistencia-content');
     el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
 
+    await this._backfillVencidas();
+
     const { data: sesiones, error } = await sb
       .from('attendance_sessions')
-      .select('id, session_date, status, attendance_records(status)')
+      .select('id, session_date, attendance_records(status)')
       .eq('subject_id', ProfesorState.materia.id)
       .order('session_date', { ascending: false });
 
@@ -320,20 +295,17 @@ const ProfesorAsistencia = {
 
     if (!sesiones?.length) {
       el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}
-        <div class="empty-state"><div class="icon">🗓️</div><p>Todavía no abriste ninguna clase en esta materia.</p></div>`;
+        <div class="empty-state"><div class="icon">🗓️</div><p>Todavía no hay clases registradas en esta materia.</p></div>`;
       return;
     }
 
     const rows = sesiones.map(s => {
       const recs = s.attendance_records || [];
       const n = st => recs.filter(r => r.status === st).length;
-      const estadoBadge = s.status === 'abierta'
-        ? '<span class="badge badge-practice">🟢 Abierta</span>'
-        : '<span class="badge badge-inactive">Cerrada</span>';
       return `
         <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1;min-width:0">
-            <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${Utils.formatDate(s.session_date)} ${estadoBadge}</div>
+            <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${Utils.formatDate(s.session_date)}</div>
             <div style="font-size:.73rem;color:var(--text-3);margin-top:2px">
               ${n('presente')} presentes · ${n('tarde')} tarde · ${n('ausente')} ausentes · ${n('justificada')} justificadas
             </div>
@@ -349,18 +321,76 @@ const ProfesorAsistencia = {
   },
 
   async _verDia(fecha) {
+    await this._cargarHorarios();
+    await this._cargar(fecha);
+    this._verDiaRefresh();
+  },
+
+  // ── Horario: vincular/quitar bloques del cronograma ───────
+
+  async _institucion() {
+    if (this._institutionId) return this._institutionId;
+    const session = Auth.session();
+    const { data } = await sb.from('professors').select('institution_id').eq('id', session.id).single();
+    this._institutionId = data?.institution_id || null;
+    return this._institutionId;
+  },
+
+  async _renderHorario() {
     const el = document.getElementById('asistencia-content');
     el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
-    await this._cargar(fecha);
+
+    const { data: vinculados } = await sb.from('schedules').select('*')
+      .eq('subject_id', ProfesorState.materia.id).order('day').order('time_start');
+
+    const { data: candidatos } = await sb.from('schedules').select('*')
+      .is('subject_id', null).eq('anio', ProfesorState.materia.year || 0)
+      .order('day').order('time_start');
+
+    const vinculadosHtml = (vinculados || []).length
+      ? vinculados.map(h => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:.85rem;color:var(--text-1)">${h.day} · ${h.time_start}–${h.time_end}${h.is_consulta ? ' (consulta)' : ''}</div>
+          <button class="btn btn-danger btn-sm" onclick="ProfesorAsistencia._quitarVinculo('${h.id}')">Quitar</button>
+        </div>`).join('')
+      : '<div style="padding:16px 0;color:var(--text-3);font-size:.85rem">Esta materia no tiene horarios vinculados todavía.</div>';
+
+    const candidatosHtml = (candidatos || []).length
+      ? candidatos.map(h => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:.85rem;color:var(--text-1)">
+            ${h.day} · ${h.time_start}–${h.time_end}
+            <span style="color:var(--text-3)"> — "${h.subject_name}" en el cronograma</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="ProfesorAsistencia._vincularHorario('${h.id}')">Vincular</button>
+        </div>`).join('')
+      : '<div style="padding:16px 0;color:var(--text-3);font-size:.85rem">No hay más horarios de ese año sin vincular.</div>';
 
     el.innerHTML = `
       <div class="page-header"><h3>Asistencia</h3></div>
       ${this._tabsHtml()}
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="ProfesorAsistencia.cambiarVista('historial')">← Volver al historial</button>
-      <div class="card" style="margin-bottom:16px">
-        <div style="font-weight:600;color:var(--text-1)">${Utils.formatDate(fecha)}</div>
-        <div style="font-size:.8rem;color:var(--text-3);margin-top:2px">${this._resumenCorto()}</div>
-      </div>
-      ${this._listaConCorreccion()}`;
+      <p style="font-size:.82rem;color:var(--text-2);margin-bottom:16px">
+        La ventana de asistencia se calcula a partir de estos horarios. Vinculá acá los bloques del cronograma que correspondan a esta materia
+        (si ocupa varias horas seguidas el mismo día, vinculalos todos).
+      </p>
+      <div class="page-header" style="margin-top:4px"><h3 style="font-size:.95rem">Horarios vinculados</h3></div>
+      ${vinculadosHtml}
+      <div class="page-header" style="margin-top:24px"><h3 style="font-size:.95rem">Vincular desde el cronograma</h3></div>
+      ${candidatosHtml}`;
+  },
+
+  async _vincularHorario(scheduleId) {
+    const { error } = await sb.from('schedules').update({ subject_id: ProfesorState.materia.id }).eq('id', scheduleId);
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast('Horario vinculado');
+    this._renderHorario();
+  },
+
+  async _quitarVinculo(scheduleId) {
+    if (!await Utils.confirmar('¿Quitar este horario de la materia? Ya no se podrá calcular la ventana de asistencia para ese bloque.')) return;
+    const { error } = await sb.from('schedules').update({ subject_id: null }).eq('id', scheduleId);
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast('Vínculo quitado');
+    this._renderHorario();
   },
 };

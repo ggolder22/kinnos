@@ -1,8 +1,11 @@
 // ═══════════════════════════════════════════════════
 //  Asistencia — helpers compartidos (profesor + alumno)
+//  La ventana para marcar presente se deriva del cronograma:
+//  arranca en el horario de inicio de la materia y dura VENTANA_MIN.
 // ═══════════════════════════════════════════════════
 const Asistencia = {
-  UMBRAL: 70, // % mínimo para regularizar
+  UMBRAL: 70,      // % mínimo para regularizar
+  VENTANA_MIN: 30, // minutos de ventana desde el inicio de la clase
 
   // 'justificada' no cuenta ni a favor ni en contra: queda fuera del cálculo
   PESO: { presente: 1, tarde: 0.5, ausente: 0, justificada: null },
@@ -16,7 +19,61 @@ const Asistencia = {
     justificada: 'rgba(100,116,139,.15)',
   },
 
-  // records: [{ status }, ...] — devuelve { pct, computadas, total } o null si no hay clases computables
+  DIAS: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+
+  diaDeHoy() {
+    return this.DIAS[new Date().getDay()];
+  },
+
+  // Nombre del día de la semana para una fecha "YYYY-MM-DD" (sin corrimiento de huso horario)
+  diaDeFecha(fechaStr) {
+    const [y, m, d] = fechaStr.split('-').map(Number);
+    return this.DIAS[new Date(y, m - 1, d, 12).getDay()];
+  },
+
+  // horarios: filas de `schedules` ya filtradas por subject_id — puede haber varias
+  // para el mismo día si la clase ocupa varios bloques seguidos; se toma la más temprana.
+  _inicioDelDia(horarios, nombreDia) {
+    const deEseDia = (horarios || [])
+      .filter(h => h.day === nombreDia && !h.is_consulta)
+      .sort((a, b) => a.time_start.localeCompare(b.time_start));
+    return deEseDia[0]?.time_start || null; // "HH:MM"
+  },
+
+  // Ventana de HOY para una materia, según su cronograma. Devuelve { start, end } (Date) o null.
+  ventanaDeHoy(horarios) {
+    const inicio = this._inicioDelDia(horarios, this.diaDeHoy());
+    if (!inicio) return null;
+    const [h, m] = inicio.split(':').map(Number);
+    const start = new Date();
+    start.setHours(h, m, 0, 0);
+    return { start, end: new Date(start.getTime() + this.VENTANA_MIN * 60000) };
+  },
+
+  // Ventana de una fecha pasada/futura puntual, para el profesor al revisar el historial.
+  ventanaDeFecha(fechaStr, horarios) {
+    const inicio = this._inicioDelDia(horarios, this.diaDeFecha(fechaStr));
+    if (!inicio) return null;
+    const [h, m] = inicio.split(':').map(Number);
+    const [y, mo, d] = fechaStr.split('-').map(Number);
+    const start = new Date(y, mo - 1, d, h, m, 0, 0);
+    return { start, end: new Date(start.getTime() + this.VENTANA_MIN * 60000) };
+  },
+
+  // 'sin_clase' | 'antes' | 'abierta' | 'vencida'
+  estadoVentana(ventana) {
+    if (!ventana) return 'sin_clase';
+    const ahora = new Date();
+    if (ahora < ventana.start) return 'antes';
+    if (ahora > ventana.end) return 'vencida';
+    return 'abierta';
+  },
+
+  horaCorta(d) {
+    return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  },
+
+  // records: [{ status }, ...] — devuelve { pct, computadas, total } o pct null si no hay clases computables
   calcular(records) {
     let computadas = 0, suma = 0, total = records.length;
     for (const r of records) {
