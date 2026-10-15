@@ -37,9 +37,9 @@ const ProfesorAsistencia = {
   async _cargar(fecha) {
     this._fecha = fecha;
     const { data: inscriptos } = await sb
-      .from('student_subjects').select('students(id, full_name, dni)').eq('subject_id', ProfesorState.materia.id);
+      .from('student_subjects').select('students(id, full_name, first_name, last_name, dni)').eq('subject_id', ProfesorState.materia.id);
     this._roster = (inscriptos || []).map(r => r.students).filter(Boolean)
-      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
 
     const { data: sesion } = await sb
       .from('attendance_sessions').select('*')
@@ -115,7 +115,7 @@ const ProfesorAsistencia = {
       return `
         <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1;min-width:0">
-            <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${a.full_name}</div>
+            <div style="font-size:.875rem;font-weight:500;color:var(--text-1)">${Utils.nombrePlanilla(a)}</div>
             <div style="font-size:.72rem;color:var(--text-3)">
               ${rec
                 ? `${quien[rec.marked_by_role] || ''}${rec.marked_at ? ' a las ' + Asistencia.horaCorta(new Date(rec.marked_at)) : ''}`
@@ -223,7 +223,7 @@ const ProfesorAsistencia = {
     await this._backfillVencidas();
 
     const { data: inscriptos } = await sb
-      .from('student_subjects').select('students(id, full_name, dni)').eq('subject_id', ProfesorState.materia.id);
+      .from('student_subjects').select('students(id, full_name, first_name, last_name, dni)').eq('subject_id', ProfesorState.materia.id);
     const roster = (inscriptos || []).map(r => r.students).filter(Boolean);
 
     const { data: sesiones } = await sb
@@ -253,7 +253,7 @@ const ProfesorAsistencia = {
 
     const rows = filas.map(({ a, pct }) => `
       <tr>
-        <td class="text-main">${a.full_name}</td>
+        <td class="text-main">${Utils.nombrePlanilla(a)}</td>
         <td>${a.dni}</td>
         <td>${Asistencia.badge(pct)}</td>
       </tr>`).join('');

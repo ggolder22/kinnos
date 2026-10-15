@@ -51,6 +51,16 @@ const Utils = {
     }
   },
 
+  // Nombre de un alumno en formato "Apellido, Nombre", como exige el ministerio
+  // en planillas (asistencia, actas de examen, listados). Si el alumno todavía
+  // no tiene nombre/apellido separados (registro viejo), muestra full_name tal
+  // cual viene — no se puede partir un string a ciegas sin arriesgar un error.
+  nombrePlanilla(alumno) {
+    if (!alumno) return '';
+    if (alumno.last_name && alumno.first_name) return `${alumno.last_name}, ${alumno.first_name}`;
+    return alumno.full_name || '';
+  },
+
   // Renderiza <option> en un <select>
   fillSelect(selectId, items, valueKey, labelKey, placeholderText) {
     const sel = document.getElementById(selectId);

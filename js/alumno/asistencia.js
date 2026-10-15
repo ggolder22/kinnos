@@ -61,7 +61,7 @@ const AlumnoAsistencia = {
   _banner() {
     if (!this._horarios.length) {
       return `<div class="card" style="margin-bottom:18px">
-        <div style="font-size:.85rem;color:var(--text-3)">Esta materia todavía no tiene horario cargado en el cronograma — pedile al profesor que lo vincule.</div>
+        <div style="font-size:.85rem;color:var(--text-3)">Esta materia todavía no tiene horario vinculado en el cronograma — avisale al profesor para que lo pida al administrador.</div>
       </div>`;
     }
 

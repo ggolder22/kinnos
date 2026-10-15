@@ -377,7 +377,7 @@ const ProfesorExamenes = {
 
     const { data: resultados } = await sb
       .from('exam_results')
-      .select('*, students(full_name)')
+      .select('*, students(full_name, first_name, last_name)')
       .eq('exam_id', this._examActual.id)
       .neq('status', 'in_progress')
       .order('submitted_at', { ascending: false });
@@ -390,7 +390,7 @@ const ProfesorExamenes = {
     }
 
     const rows = resultados.map(r => {
-      const nombre     = r.students?.full_name || 'Alumno';
+      const nombre     = Utils.nombrePlanilla(r.students) || 'Alumno';
       const finalScore = r.professor_score ?? r.score;
       const grade      = Math.round(finalScore / 10 * 10) / 10;
       const color      = grade >= 6 ? 'var(--success)' : 'var(--danger)';
@@ -429,7 +429,7 @@ const ProfesorExamenes = {
 
     const { data: resultado } = await sb
       .from('exam_results')
-      .select('*, students(full_name, dni)')
+      .select('*, students(full_name, first_name, last_name, dni)')
       .eq('id', resultId)
       .single();
 
@@ -481,7 +481,7 @@ const ProfesorExamenes = {
       : (resultado.professor_score ?? autoGrade);
     const grade  = Math.round(finalScore / 10 * 10) / 10;
     const color  = grade >= 6 ? 'var(--success)' : 'var(--danger)';
-    const nombre = resultado.students?.full_name || 'Alumno';
+    const nombre = Utils.nombrePlanilla(resultado.students) || 'Alumno';
     const dniStr = resultado.students?.dni ? ` · DNI ${resultado.students.dni}` : '';
 
     const typeLabel = { multiple: 'M', truefalse: 'V/F', short: 'Corta' };

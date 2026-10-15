@@ -9,7 +9,7 @@ const ProfesorAlumnos = {
 
     const { data, error } = await sb
       .from('student_subjects')
-      .select('enrolled_at, students(id, full_name, dni, email, phone, anio, division)')
+      .select('enrolled_at, students(id, full_name, first_name, last_name, dni, email, phone, anio, division)')
       .eq('subject_id', ProfesorState.materia.id)
       .order('enrolled_at', { ascending: false });
 
@@ -93,7 +93,7 @@ const ProfesorAlumnos = {
       const curso = a.anio ? `${a.anio}°${a.division ? ' ' + a.division : ''}` : '—';
       return `
         <tr>
-          <td class="text-main">${a.full_name}</td>
+          <td class="text-main">${Utils.nombrePlanilla(a)}</td>
           <td>${a.dni}</td>
           <td>${curso}</td>
           <td>${a.email || '—'}</td>

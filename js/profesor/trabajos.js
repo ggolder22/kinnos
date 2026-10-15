@@ -170,7 +170,7 @@ const ProfesorTrabajos = {
 
     const { data: entregas } = await sb
       .from('assignment_submissions')
-      .select('*, students(full_name, dni)')
+      .select('*, students(full_name, first_name, last_name, dni)')
       .eq('assignment_id', this._tpActual.id)
       .order('submitted_at', { ascending: false });
 
@@ -188,7 +188,7 @@ const ProfesorTrabajos = {
     }
 
     const rows = entregas.map(e => {
-      const nombre = e.students?.full_name || 'Alumno';
+      const nombre = Utils.nombrePlanilla(e.students) || 'Alumno';
       const revisado = e.status === 'reviewed';
       return `
         <div style="padding:12px 0;border-bottom:1px solid var(--border)">

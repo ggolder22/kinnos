@@ -7,11 +7,11 @@ const AdminAlumnos = {
 
     const { data, error } = await sb
       .from('students')
-      .select('*, institutions(name)')
-      .order('full_name');
+      .select('*, institutions(name)');
 
     if (error) { Utils.toast('Error al cargar alumnos', 'error'); return; }
-    this._todos = data || [];
+    // Orden alfabético por apellido (criterio ministerio), con los que todavía no lo tienen separado al final
+    this._todos = (data || []).sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
     this._render(this._todos);
   },
 
@@ -34,7 +34,7 @@ const AdminAlumnos = {
 
     const rows = data.map(a => `
       <tr>
-        <td class="text-main">${a.full_name}</td>
+        <td class="text-main">${Utils.nombrePlanilla(a)}</td>
         <td>${a.dni}</td>
         <td>${a.email || '—'}</td>
         <td>${a.phone || '—'}</td>

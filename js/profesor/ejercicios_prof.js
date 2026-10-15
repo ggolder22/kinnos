@@ -99,7 +99,7 @@ const ProfesorEjercicios = {
     }
 
     const { data: attempts } = await sb.from('student_exercise_attempts')
-      .select('student_id, exercise_id, is_correct, students(full_name)')
+      .select('student_id, exercise_id, is_correct, students(full_name, first_name, last_name)')
       .in('exercise_id', ejercicios.map(e => e.id));
 
     if (!attempts?.length) {
@@ -111,7 +111,7 @@ const ProfesorEjercicios = {
     const byStudent = {};
     for (const a of attempts) {
       if (!byStudent[a.student_id]) {
-        byStudent[a.student_id] = { name: a.students?.full_name || '—', intentos: 0, correctos: 0 };
+        byStudent[a.student_id] = { name: Utils.nombrePlanilla(a.students) || '—', intentos: 0, correctos: 0 };
       }
       byStudent[a.student_id].intentos++;
       if (a.is_correct) byStudent[a.student_id].correctos++;
