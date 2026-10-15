@@ -21,6 +21,28 @@ const Asistencia = {
 
   DIAS: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 
+  // Trae los horarios de una materia desde el cronograma. No hace falta que nadie
+  // los vincule a mano: primero busca un vínculo explícito (subject_id, cargado por
+  // el admin para casos puntuales) y si no hay, matchea en vivo por año + nombre
+  // (y división, si la materia la tiene definida).
+  async cargarHorariosDeMateria(materia) {
+    if (!materia?.id) return [];
+
+    const { data: vinculados } = await sb.from('schedules').select('*').eq('subject_id', materia.id);
+    if (vinculados?.length) return vinculados;
+
+    if (!materia.name || !materia.year) return [];
+    const { data: porNombre } = await sb
+      .from('schedules').select('*')
+      .eq('anio', materia.year)
+      .ilike('subject_name', materia.name.trim());
+
+    if (!porNombre?.length) return [];
+    return materia.division
+      ? porNombre.filter(r => !r.division || r.division === materia.division)
+      : porNombre;
+  },
+
   diaDeHoy() {
     return this.DIAS[new Date().getDay()];
   },

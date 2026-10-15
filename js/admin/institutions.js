@@ -261,6 +261,7 @@ const AdminInstitutions = {
         <td><span class="badge badge-code">${m.join_code}</span></td>
         <td>
           <div class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="AdminInstitutions.abrirHorarios('${m.id}','${m.name.replace(/'/g, "\\'")}',${m.year || 'null'},${m.division ? `'${m.division}'` : 'null'})">Horarios</button>
             <button class="btn btn-ghost btn-sm" onclick="AdminInstitutions.openMateriaModal(${JSON.stringify(m).replace(/"/g, '&quot;')})">Editar</button>
             <button class="btn btn-danger btn-sm" onclick="AdminInstitutions.deleteMateria('${m.id}','${m.name.replace(/'/g, "\\'")}')">Eliminar</button>
           </div>
@@ -341,5 +342,83 @@ const AdminInstitutions = {
     if (error) { Utils.toast('Error al eliminar: ' + error.message, 'error'); return; }
     Utils.toast('Materia eliminada');
     this._loadMaterias();
+  },
+
+  // ── Vincular horarios del cronograma con la materia ───────────
+  // Por defecto el sistema matchea solo por nombre + año (sin que nadie
+  // tenga que hacer nada). Esto es solo para los casos en que el nombre
+  // en el cronograma no coincide exactamente con el de la materia.
+
+  _horariosMateria: null, // { id, name, year, division }
+
+  async abrirHorarios(id, name, year, division) {
+    this._horariosMateria = { id, name, year, division };
+    document.getElementById('horarios-modal-title').textContent = `Horarios — ${name}`;
+    document.getElementById('horarios-modal').classList.remove('hidden');
+    await this._renderHorarios();
+  },
+
+  cerrarHorarios() {
+    document.getElementById('horarios-modal').classList.add('hidden');
+  },
+
+  async _renderHorarios() {
+    const el = document.getElementById('horarios-modal-body');
+    el.innerHTML = '<div class="loading">Cargando…</div>';
+    const m = this._horariosMateria;
+
+    const { data: vinculados } = await sb.from('schedules').select('*')
+      .eq('subject_id', m.id).order('day').order('time_start');
+
+    const { data: candidatos } = await sb.from('schedules').select('*')
+      .is('subject_id', null).eq('anio', m.year || 0).order('day').order('time_start');
+
+    const vinculadosHtml = (vinculados || []).length
+      ? vinculados.map(h => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:.85rem;color:var(--text-1)">${h.day} · ${h.time_start}–${h.time_end}${h.is_consulta ? ' (consulta)' : ''}</div>
+          <button class="btn btn-danger btn-sm" onclick="AdminInstitutions._quitarHorario('${h.id}')">Quitar</button>
+        </div>`).join('')
+      : `<div style="padding:12px 0;color:var(--text-3);font-size:.85rem">
+           Sin vínculo explícito — mientras el nombre de la materia coincida con el del cronograma (${m.year ? m.year + '° año' : 'mismo año'}),
+           el sistema ya lo matchea solo y no hace falta vincular nada acá.
+         </div>`;
+
+    const candidatosHtml = (candidatos || []).length
+      ? candidatos.map(h => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:.85rem;color:var(--text-1)">
+            ${h.day} · ${h.time_start}–${h.time_end}
+            <span style="color:var(--text-3)"> — "${h.subject_name}" en el cronograma</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="AdminInstitutions._vincularHorario('${h.id}')">Vincular</button>
+        </div>`).join('')
+      : '<div style="padding:12px 0;color:var(--text-3);font-size:.85rem">No hay horarios de ese año sin vincular.</div>';
+
+    el.innerHTML = `
+      <p style="font-size:.82rem;color:var(--text-2);margin-bottom:16px">
+        La ventana de asistencia se calcula a partir de estos horarios. Por defecto el sistema matchea
+        automáticamente por nombre y año — usá esto solo si una materia no quedó bien vinculada
+        (nombre distinto en el cronograma, abreviatura, etc.). Si la clase ocupa varias horas seguidas
+        el mismo día, vinculá todos esos bloques.
+      </p>
+      <div class="page-header" style="margin-top:4px"><h3 style="font-size:.95rem">Vínculo explícito</h3></div>
+      ${vinculadosHtml}
+      <div class="page-header" style="margin-top:20px"><h3 style="font-size:.95rem">Vincular desde el cronograma</h3></div>
+      ${candidatosHtml}`;
+  },
+
+  async _vincularHorario(scheduleId) {
+    const { error } = await sb.from('schedules').update({ subject_id: this._horariosMateria.id }).eq('id', scheduleId);
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast('Horario vinculado');
+    this._renderHorarios();
+  },
+
+  async _quitarHorario(scheduleId) {
+    const { error } = await sb.from('schedules').update({ subject_id: null }).eq('id', scheduleId);
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast('Vínculo quitado — ahora se matchea de nuevo por nombre, si corresponde');
+    this._renderHorarios();
   },
 };

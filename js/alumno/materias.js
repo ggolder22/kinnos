@@ -41,7 +41,7 @@ const AlumnoMaterias = {
   async seleccionar(subjectId) {
     const { data: m } = await sb
       .from('subjects')
-      .select('id, name, year, join_code, careers(name, institutions(name))')
+      .select('id, name, year, division, join_code, careers(name, institutions(name))')
       .eq('id', subjectId)
       .single();
     if (!m) return;

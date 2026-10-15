@@ -10,10 +10,7 @@ const AlumnoAsistencia = {
     const session = Auth.session();
     const hoy = Utils.hoyLocal();
 
-    const { data: horarios } = await sb
-      .from('schedules').select('day, time_start, time_end, is_consulta')
-      .eq('subject_id', AlumnoState.materia.id);
-    this._horarios = horarios || [];
+    this._horarios = await Asistencia.cargarHorariosDeMateria(AlumnoState.materia);
     this._ventana = Asistencia.ventanaDeHoy(this._horarios);
 
     this._sesionHoy = null;

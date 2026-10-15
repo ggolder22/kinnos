@@ -1,11 +1,10 @@
 const ProfesorAsistencia = {
-  _vista:         'hoy',
-  _fecha:         null,
-  _horarios:      [],
-  _roster:        [],
-  _sesion:        null,
-  _records:       {}, // { student_id: record }
-  _institutionId: null,
+  _vista:    'hoy',
+  _fecha:    null,
+  _horarios: [],
+  _roster:   [],
+  _sesion:   null,
+  _records:  {}, // { student_id: record }
 
   async init() {
     this._vista = 'hoy';
@@ -15,7 +14,7 @@ const ProfesorAsistencia = {
   _tabsHtml() {
     const tab = (key, label) => `
       <button class="btn ${this._vista === key ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="ProfesorAsistencia.cambiarVista('${key}')">${label}</button>`;
-    return `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tab('hoy', 'Hoy')}${tab('resumen', 'Resumen')}${tab('historial', 'Historial')}${tab('horario', 'Horario')}</div>`;
+    return `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tab('hoy', 'Hoy')}${tab('resumen', 'Resumen')}${tab('historial', 'Historial')}</div>`;
   },
 
   cambiarVista(v) {
@@ -27,15 +26,12 @@ const ProfesorAsistencia = {
     if (this._vista === 'hoy')       return this._renderHoy();
     if (this._vista === 'resumen')   return this._renderResumen();
     if (this._vista === 'historial') return this._renderHistorial();
-    if (this._vista === 'horario')   return this._renderHorario();
   },
 
   // ── Cargar roster + horarios + sesión + registros de una fecha ───
 
   async _cargarHorarios() {
-    const { data } = await sb.from('schedules').select('*')
-      .eq('subject_id', ProfesorState.materia.id).order('day').order('time_start');
-    this._horarios = data || [];
+    this._horarios = await Asistencia.cargarHorariosDeMateria(ProfesorState.materia);
   },
 
   async _cargar(fecha) {
@@ -76,11 +72,12 @@ const ProfesorAsistencia = {
     if (!this._horarios.length) {
       el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}
         <div class="card" style="max-width:480px">
-          <div style="font-weight:600;color:var(--text-1);margin-bottom:6px">Esta materia no tiene horario vinculado</div>
-          <p style="font-size:.85rem;color:var(--text-2);margin-bottom:14px">
-            La ventana de asistencia se calcula a partir del cronograma. Andá a la pestaña <strong>"Horario"</strong> para vincular los días y horarios de esta materia.
+          <div style="font-weight:600;color:var(--text-1);margin-bottom:6px">No encontramos el horario de esta materia</div>
+          <p style="font-size:.85rem;color:var(--text-2)">
+            La ventana de asistencia se calcula sola a partir del cronograma, buscando una materia con el mismo nombre y año.
+            Si el nombre en el cronograma es distinto al de esta materia (por ejemplo, una tilde o una abreviatura),
+            pedile al administrador que los vincule desde su panel.
           </p>
-          <button class="btn btn-primary btn-sm" onclick="ProfesorAsistencia.cambiarVista('horario')">Ir a Horario</button>
         </div>`;
       return;
     }
@@ -196,7 +193,7 @@ const ProfesorAsistencia = {
     if (!rosterIds.length) return;
 
     await this._cargarHorarios();
-    if (!this._horarios.length) return; // sin cronograma vinculado, no sabemos si venció
+    if (!this._horarios.length) return; // no se encontró el horario de esta materia en el cronograma
 
     const { data: sesiones } = await sb.from('attendance_sessions').select('id, session_date').eq('subject_id', ProfesorState.materia.id);
     if (!sesiones?.length) return;
@@ -324,73 +321,5 @@ const ProfesorAsistencia = {
     await this._cargarHorarios();
     await this._cargar(fecha);
     this._verDiaRefresh();
-  },
-
-  // ── Horario: vincular/quitar bloques del cronograma ───────
-
-  async _institucion() {
-    if (this._institutionId) return this._institutionId;
-    const session = Auth.session();
-    const { data } = await sb.from('professors').select('institution_id').eq('id', session.id).single();
-    this._institutionId = data?.institution_id || null;
-    return this._institutionId;
-  },
-
-  async _renderHorario() {
-    const el = document.getElementById('asistencia-content');
-    el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
-
-    const { data: vinculados } = await sb.from('schedules').select('*')
-      .eq('subject_id', ProfesorState.materia.id).order('day').order('time_start');
-
-    const { data: candidatos } = await sb.from('schedules').select('*')
-      .is('subject_id', null).eq('anio', ProfesorState.materia.year || 0)
-      .order('day').order('time_start');
-
-    const vinculadosHtml = (vinculados || []).length
-      ? vinculados.map(h => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:.85rem;color:var(--text-1)">${h.day} · ${h.time_start}–${h.time_end}${h.is_consulta ? ' (consulta)' : ''}</div>
-          <button class="btn btn-danger btn-sm" onclick="ProfesorAsistencia._quitarVinculo('${h.id}')">Quitar</button>
-        </div>`).join('')
-      : '<div style="padding:16px 0;color:var(--text-3);font-size:.85rem">Esta materia no tiene horarios vinculados todavía.</div>';
-
-    const candidatosHtml = (candidatos || []).length
-      ? candidatos.map(h => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:.85rem;color:var(--text-1)">
-            ${h.day} · ${h.time_start}–${h.time_end}
-            <span style="color:var(--text-3)"> — "${h.subject_name}" en el cronograma</span>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="ProfesorAsistencia._vincularHorario('${h.id}')">Vincular</button>
-        </div>`).join('')
-      : '<div style="padding:16px 0;color:var(--text-3);font-size:.85rem">No hay más horarios de ese año sin vincular.</div>';
-
-    el.innerHTML = `
-      <div class="page-header"><h3>Asistencia</h3></div>
-      ${this._tabsHtml()}
-      <p style="font-size:.82rem;color:var(--text-2);margin-bottom:16px">
-        La ventana de asistencia se calcula a partir de estos horarios. Vinculá acá los bloques del cronograma que correspondan a esta materia
-        (si ocupa varias horas seguidas el mismo día, vinculalos todos).
-      </p>
-      <div class="page-header" style="margin-top:4px"><h3 style="font-size:.95rem">Horarios vinculados</h3></div>
-      ${vinculadosHtml}
-      <div class="page-header" style="margin-top:24px"><h3 style="font-size:.95rem">Vincular desde el cronograma</h3></div>
-      ${candidatosHtml}`;
-  },
-
-  async _vincularHorario(scheduleId) {
-    const { error } = await sb.from('schedules').update({ subject_id: ProfesorState.materia.id }).eq('id', scheduleId);
-    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
-    Utils.toast('Horario vinculado');
-    this._renderHorario();
-  },
-
-  async _quitarVinculo(scheduleId) {
-    if (!await Utils.confirmar('¿Quitar este horario de la materia? Ya no se podrá calcular la ventana de asistencia para ese bloque.')) return;
-    const { error } = await sb.from('schedules').update({ subject_id: null }).eq('id', scheduleId);
-    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
-    Utils.toast('Vínculo quitado');
-    this._renderHorario();
   },
 };

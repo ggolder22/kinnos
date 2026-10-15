@@ -182,6 +182,20 @@
   </div>
 </div>
 
+<!-- Modal: Horarios de la materia (vínculo con el cronograma, para asistencia) -->
+<div class="modal-backdrop hidden" id="horarios-modal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h4 id="horarios-modal-title" style="margin:0">Horarios</h4>
+      <button class="btn btn-ghost btn-sm" onclick="AdminInstitutions.cerrarHorarios()">✕</button>
+    </div>
+    <div id="horarios-modal-body" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminInstitutions.cerrarHorarios()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Profesor -->
 <div class="modal-backdrop hidden" id="prof-modal">
   <div class="modal">
