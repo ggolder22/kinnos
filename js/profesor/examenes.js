@@ -396,6 +396,7 @@ const ProfesorExamenes = {
 
   cerrarResultados() {
     document.getElementById('exam-res-modal').classList.add('hidden');
+    this.init(); // refresca el contador "para revisar" de la lista principal
   },
 
   async _loadResultados() {

@@ -646,12 +646,20 @@
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
 
+  // Si se cierra el modal de Resultados sin pasar por el botón ✕ (Escape o clic
+  // afuera), igual hay que refrescar el contador "para revisar" de la lista.
+  function cerrarModalBackdrop(m) {
+    const yaEstabaAbierto = !m.classList.contains('hidden');
+    m.classList.add('hidden');
+    if (yaEstabaAbierto && m.id === 'exam-res-modal') ProfesorExamenes.init();
+  }
+
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(cerrarModalBackdrop);
   });
   document.querySelectorAll('.modal-backdrop').forEach(b => {
-    b.addEventListener('click', e => { if (e.target === b) b.classList.add('hidden'); });
+    b.addEventListener('click', e => { if (e.target === b) cerrarModalBackdrop(b); });
   });
 
   function showTab(nombre) {
