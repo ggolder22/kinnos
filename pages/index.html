@@ -90,7 +90,24 @@
         return;
       }
 
-      // 3. Alumno
+      // 3. Preceptor
+      const { data: prec } = await sb
+        .from('preceptors')
+        .select('id, full_name, dni, institution_id')
+        .eq('dni', dni)
+        .maybeSingle();
+
+      if (prec) {
+        sessionStorage.setItem('kinnos_rol', 'preceptor');
+        sessionStorage.setItem('kinnos_dni', dni);
+        sessionStorage.setItem('kinnos_id', prec.id);
+        sessionStorage.setItem('kinnos_nombre', prec.full_name);
+        if (prec.institution_id) sessionStorage.setItem('kinnos_inst', prec.institution_id);
+        window.location.href = 'preceptor.html';
+        return;
+      }
+
+      // 4. Alumno
       const { data: alumno } = await sb
         .from('students')
         .select('id, full_name, dni, institution_id, career_id')

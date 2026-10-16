@@ -3,6 +3,7 @@ const AlumnoAsistencia = {
   _ventana:       null,
   _sesionHoy:     null,
   _miRegistroHoy: null,
+  _diaCerrado:    null, // { reason } si hoy la institución no tiene clases
 
   async init() {
     const el = document.getElementById('asistencia-content');
@@ -10,8 +11,11 @@ const AlumnoAsistencia = {
     const session = Auth.session();
     const hoy = Utils.hoyLocal();
 
-    this._horarios = await Asistencia.cargarHorariosDeMateria(AlumnoState.materia);
-    this._ventana = Asistencia.ventanaDeHoy(this._horarios);
+    const institutionId = AlumnoState.materia?.careers?.institutions?.id || null;
+    this._diaCerrado = await Asistencia.diaSinClases(institutionId, hoy);
+
+    this._horarios = this._diaCerrado ? [] : await Asistencia.cargarHorariosDeMateria(AlumnoState.materia);
+    this._ventana = this._diaCerrado ? null : Asistencia.ventanaDeHoy(this._horarios);
 
     this._sesionHoy = null;
     this._miRegistroHoy = null;
@@ -59,6 +63,12 @@ const AlumnoAsistencia = {
   },
 
   _banner() {
+    if (this._diaCerrado) {
+      return `<div class="card" style="margin-bottom:18px;border-color:#f59e0b">
+        <div style="font-weight:600;color:#f59e0b">🚫 Hoy no hay clases</div>
+        <div style="font-size:.8rem;color:var(--text-3);margin-top:2px">${this._diaCerrado.reason || 'Día sin clases para toda la institución.'}</div>
+      </div>`;
+    }
     if (!this._horarios.length) {
       return `<div class="card" style="margin-bottom:18px">
         <div style="font-size:.85rem;color:var(--text-3)">Esta materia todavía no tiene horario vinculado en el cronograma — avisale al profesor para que lo pida al administrador.</div>

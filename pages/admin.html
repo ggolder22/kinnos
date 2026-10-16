@@ -28,6 +28,9 @@
       <div class="nav-item" id="nav-alumnos" onclick="showPage('alumnos')">
         <span class="icon">👥</span> Alumnos
       </div>
+      <div class="nav-item" id="nav-preceptores" onclick="showPage('preceptores')">
+        <span class="icon">🗂️</span> Preceptores
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
@@ -59,6 +62,11 @@
     <!-- Página: Alumnos -->
     <div class="page" id="page-alumnos">
       <div id="alumnos-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <!-- Página: Preceptores -->
+    <div class="page" id="page-preceptores">
+      <div id="preceptores-content"><div class="loading">Cargando…</div></div>
     </div>
   </div>
 
@@ -224,6 +232,40 @@
   </div>
 </div>
 
+<!-- Modal: Preceptor -->
+<div class="modal-backdrop hidden" id="preceptor-modal">
+  <div class="modal">
+    <h4 id="preceptor-modal-title">Nuevo preceptor</h4>
+    <input type="hidden" id="preceptor-modal-id">
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input type="text" id="preceptor-modal-name" placeholder="Ej: María González">
+    </div>
+    <div class="form-group">
+      <label>DNI *</label>
+      <input type="text" id="preceptor-modal-dni" placeholder="Ej: 28450123" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="preceptor-modal-email" placeholder="Ej: maria@escuela.edu.ar">
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input type="text" id="preceptor-modal-phone" placeholder="Ej: 2604 123456">
+    </div>
+    <div class="form-group">
+      <label>Institución</label>
+      <select id="preceptor-modal-inst">
+        <option value="">Sin institución asignada</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="AdminPreceptors.closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="preceptor-modal-save" onclick="AdminPreceptors.save()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Alumno -->
 <div class="modal-backdrop hidden" id="alumno-modal">
   <div class="modal">
@@ -316,6 +358,7 @@
 <script src="../js/admin/institutions.js"></script>
 <script src="../js/admin/professors.js"></script>
 <script src="../js/admin/alumnos.js"></script>
+<script src="../js/admin/preceptors.js"></script>
 
 <script>
   if (!Auth.require('admin')) throw new Error('no-auth');
@@ -334,8 +377,8 @@
     });
   });
 
-  const navIds = { instituciones: 'inst', profesores: 'prof', alumnos: 'alumnos' };
-  const titles  = { instituciones: 'Instituciones', profesores: 'Profesores', alumnos: 'Alumnos' };
+  const navIds = { instituciones: 'inst', profesores: 'prof', alumnos: 'alumnos', preceptores: 'preceptores' };
+  const titles  = { instituciones: 'Instituciones', profesores: 'Profesores', alumnos: 'Alumnos', preceptores: 'Preceptores' };
 
   function showPage(nombre) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -349,6 +392,7 @@
     if (nombre === 'instituciones') AdminInstitutions.init();
     if (nombre === 'profesores')    AdminProfessors.init();
     if (nombre === 'alumnos')       AdminAlumnos.init();
+    if (nombre === 'preceptores')   AdminPreceptors.init();
   }
 
   showPage('instituciones');

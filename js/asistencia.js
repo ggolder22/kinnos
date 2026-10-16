@@ -21,6 +21,15 @@ const Asistencia = {
 
   DIAS: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 
+  // Devuelve { reason } si ese día está cerrado para toda la institución
+  // (feriado o suspensión de clases cargada por un preceptor), o null si es un día normal.
+  async diaSinClases(institutionId, fechaStr) {
+    if (!institutionId) return null;
+    const { data } = await sb.from('no_class_days').select('reason')
+      .eq('institution_id', institutionId).eq('day_date', fechaStr).maybeSingle();
+    return data || null;
+  },
+
   // Trae los horarios de una materia desde el cronograma. No hace falta que nadie
   // los vincule a mano: primero busca un vínculo explícito (subject_id, cargado por
   // el admin para casos puntuales) y si no hay, matchea en vivo por año + nombre

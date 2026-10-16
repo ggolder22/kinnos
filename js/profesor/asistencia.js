@@ -60,6 +60,21 @@ const ProfesorAsistencia = {
     el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}<div class="loading">Cargando…</div>`;
 
     const hoy = Utils.hoyLocal();
+
+    const institutionId = ProfesorState.materia?.careers?.institutions?.id || null;
+    const diaCerrado = await Asistencia.diaSinClases(institutionId, hoy);
+    if (diaCerrado) {
+      el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}
+        <div class="card" style="border-color:#f59e0b">
+          <div style="font-weight:600;color:#f59e0b">🚫 Hoy no hay clases</div>
+          <div style="font-size:.85rem;color:var(--text-2);margin-top:4px">${diaCerrado.reason || 'Día sin clases para toda la institución.'}</div>
+          <p style="font-size:.78rem;color:var(--text-3);margin-top:10px">
+            Lo cargó Preceptoría — mientras esté así, nadie puede registrar asistencia en esta materia hoy.
+          </p>
+        </div>`;
+      return;
+    }
+
     await this._cargarHorarios();
     await this._cargar(hoy);
 
@@ -205,10 +220,16 @@ const ProfesorAsistencia = {
     const { data: sesiones } = await sb.from('attendance_sessions').select('id, session_date').eq('subject_id', ProfesorState.materia.id);
     if (!sesiones?.length) return;
 
+    const institutionId = ProfesorState.materia?.careers?.institutions?.id || null;
     const ahora = new Date();
     for (const s of sesiones) {
       const ventana = Asistencia.ventanaDeFecha(s.session_date, this._horarios);
       if (!ventana || ahora <= ventana.end) continue;
+
+      // Si ese día estaba declarado sin clases, no se completa como "ausente" —
+      // lo resuelve la justificación masiva de Preceptoría.
+      const diaCerrado = await Asistencia.diaSinClases(institutionId, s.session_date);
+      if (diaCerrado) continue;
 
       const { data: existentes } = await sb.from('attendance_records').select('student_id').eq('session_id', s.id);
       const yaTienen = new Set((existentes || []).map(r => r.student_id));

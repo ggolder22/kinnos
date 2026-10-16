@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinnos — Preceptor</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Kin<span>nos</span></h1>
+      <small>Preceptor</small>
+    </div>
+    <nav>
+      <div class="nav-section">Institución</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" id="nav-alumnos" onclick="showPage('alumnos')">
+        <span class="icon">👥</span> Alumnos
+      </div>
+      <div class="nav-item" id="nav-asistencia" onclick="showPage('asistencia')">
+        <span class="icon">🗓️</span> Asistencia
+      </div>
+      <div class="nav-item" id="nav-notas" onclick="showPage('notas')">
+        <span class="icon">📝</span> Notas
+      </div>
+      <div class="nav-item" id="nav-calendario" onclick="showPage('calendario')">
+        <span class="icon">🚫</span> Calendario
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-toggle" onclick="toggleDrawer()" aria-label="Menú">&#9776;</button>
+      <h2 id="topbar-title" style="flex:1">Dashboard</h2>
+      <div class="topbar-right">
+        <a href="ayuda.html" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Ayuda">❓ Ayuda</a>
+        <span id="preceptor-greeting"></span>
+      </div>
+    </div>
+
+    <div class="page active" id="page-dashboard">
+      <div id="dashboard-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <div class="page" id="page-alumnos">
+      <div id="alumnos-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <div class="page" id="page-asistencia">
+      <div id="asistencia-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <div class="page" id="page-notas">
+      <div id="notas-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <div class="page" id="page-calendario">
+      <div id="calendario-content"><div class="loading">Cargando…</div></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div class="drawer-backdrop" onclick="closeDrawer()"></div>
+
+<!-- ── Toast ── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: Subir certificado
+════════════════════════════════════════════ -->
+<div class="modal-backdrop hidden" id="certificado-modal">
+  <div class="modal">
+    <h4>Subir certificado</h4>
+    <p id="certificado-modal-alumno" style="font-size:.85rem;color:var(--text-3);margin-top:-8px;margin-bottom:14px"></p>
+    <div class="form-group">
+      <label>Motivo</label>
+      <input type="text" id="certificado-modal-motivo" placeholder="Ej: Certificado médico">
+    </div>
+    <div class="form-group">
+      <label>Archivo *</label>
+      <input type="file" id="certificado-modal-file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="PreceptorAsistencia.cerrarCertificado()">Cancelar</button>
+      <button class="btn btn-primary" id="certificado-modal-save" onclick="PreceptorAsistencia.subirCertificado()">Subir</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../config.js"></script>
+<script src="../js/sb.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/asistencia.js"></script>
+<script src="../js/preceptor/dashboard.js"></script>
+<script src="../js/preceptor/alumnos.js"></script>
+<script src="../js/preceptor/asistencia.js"></script>
+<script src="../js/preceptor/notas.js"></script>
+<script src="../js/preceptor/calendario.js"></script>
+<script>
+  if (!Auth.require('preceptor')) throw new Error('no-auth');
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const session = Auth.session();
+  document.getElementById('preceptor-greeting').textContent = session.nombre || `DNI ${session.dni}`;
+
+  const titles = { dashboard: 'Dashboard', alumnos: 'Alumnos', asistencia: 'Asistencia', notas: 'Notas', calendario: 'Calendario' };
+  const modulos = { dashboard: PreceptorDashboard, alumnos: PreceptorAlumnos, asistencia: PreceptorAsistencia, notas: PreceptorNotas, calendario: PreceptorCalendario };
+
+  function showPage(nombre) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`nav-${nombre}`).classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${nombre}`).classList.add('active');
+    document.getElementById('topbar-title').textContent = titles[nombre];
+    modulos[nombre]?.init();
+  }
+
+  showPage('dashboard');
+
+  function toggleDrawer() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelector('.drawer-backdrop').classList.toggle('visible');
+  }
+  function closeDrawer() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.querySelector('.drawer-backdrop').classList.remove('visible');
+  }
+  document.querySelector('.sidebar nav').addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeDrawer();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(b => {
+    b.addEventListener('click', e => { if (e.target === b) b.classList.add('hidden'); });
+  });
+</script>
+
+</body>
+</html>
