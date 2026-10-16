@@ -115,7 +115,6 @@
 <script>
   if (!Auth.require('preceptor')) throw new Error('no-auth');
 
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
   const session = Auth.session();
   document.getElementById('preceptor-greeting').textContent = session.nombre || `DNI ${session.dni}`;
 
