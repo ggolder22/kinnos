@@ -1,4 +1,13 @@
 const PreceptorDashboard = {
+  _alumnos: [],
+  _enriched: [], // [{ status, materia, anio, division, fecha, studentId }]
+  _filtroAnio: '',
+  _filtroDivision: '',
+
+  // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
+  UMBRAL_OK: 80,
+  UMBRAL_MEDIO: 70,
+
   async init() {
     const el = document.getElementById('dashboard-content');
     el.innerHTML = '<div class="loading">Cargando…</div>';
@@ -9,12 +18,11 @@ const PreceptorDashboard = {
       return;
     }
 
-    // Alumnos de la institución
     const { data: alumnos } = await sb.from('students').select('id, anio, division').eq('institution_id', session.inst);
+    this._alumnos = alumnos || [];
     const alumnoPorId = {};
-    (alumnos || []).forEach(a => { alumnoPorId[a.id] = a; });
+    this._alumnos.forEach(a => { alumnoPorId[a.id] = a; });
 
-    // Materias de las carreras de la institución
     const { data: carreras } = await sb.from('careers').select('id').eq('institution_id', session.inst);
     const careerIds = (carreras || []).map(c => c.id);
     let materias = [];
@@ -26,7 +34,6 @@ const PreceptorDashboard = {
     materias.forEach(m => { materiaPorId[m.id] = m; });
     const subjectIds = materias.map(m => m.id);
 
-    // Sesiones de asistencia de esas materias
     let sesiones = [];
     if (subjectIds.length) {
       const { data } = await sb.from('attendance_sessions').select('id, subject_id, session_date').in('subject_id', subjectIds);
@@ -36,110 +43,219 @@ const PreceptorDashboard = {
     sesiones.forEach(s => { sesionPorId[s.id] = s; });
     const sessionIds = sesiones.map(s => s.id);
 
-    // Registros de asistencia
     let registros = [];
     if (sessionIds.length) {
       const { data } = await sb.from('attendance_records').select('session_id, student_id, status').in('session_id', sessionIds);
       registros = data || [];
     }
 
-    // Enriquecer cada registro con su contexto (materia, alumno, fecha)
-    const enriched = registros.map(r => {
+    this._enriched = registros.map(r => {
       const s = sesionPorId[r.session_id];
       const a = alumnoPorId[r.student_id];
       if (!s || !a) return null;
       return {
         status: r.status,
+        studentId: r.student_id,
         materia: materiaPorId[s.subject_id]?.name || '—',
+        anioNum: a.anio || null,
         anio: a.anio ? `${a.anio}°` : 'Sin año',
         division: a.division || 'Sin división',
         fecha: s.session_date,
       };
     }).filter(Boolean);
 
-    this._render(alumnos || [], enriched);
+    this._render();
   },
 
-  _render(alumnos, enriched) {
-    const el = document.getElementById('dashboard-content');
+  // ── Filtros ──────────────────────────────────────────────
 
-    // Alumnos por año/división
-    const porAnioDiv = {};
-    alumnos.forEach(a => {
-      const k = `${a.anio ? a.anio + '°' : 'Sin año'} ${a.division || ''}`.trim();
-      porAnioDiv[k] = (porAnioDiv[k] || 0) + 1;
+  filtrar(campo, value) {
+    if (campo === 'anio')     this._filtroAnio     = value;
+    if (campo === 'division') this._filtroDivision = value;
+    this._render();
+  },
+
+  _alumnosFiltrados() {
+    return this._alumnos.filter(a => {
+      if (this._filtroAnio && String(a.anio || '') !== this._filtroAnio) return false;
+      if (this._filtroDivision && (a.division || '') !== this._filtroDivision) return false;
+      return true;
     });
-    const cardsAlumnos = Object.entries(porAnioDiv).sort(([x], [y]) => x.localeCompare(y)).map(([k, n]) => `
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:1.4rem;font-weight:700;color:var(--text-1)">${n}</div>
-        <div style="font-size:.72rem;color:var(--text-3);margin-top:2px">${k}</div>
-      </div>`).join('');
+  },
 
-    if (!enriched.length) {
-      el.innerHTML = `
-        <div class="page-header"><h3>Dashboard</h3></div>
-        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px">
-          Alumnos (${alumnos.length}) por año y división
+  _enrichedFiltrado() {
+    return this._enriched.filter(e => {
+      if (this._filtroAnio && String(e.anioNum || '') !== this._filtroAnio) return false;
+      if (this._filtroDivision && e.division !== this._filtroDivision) return false;
+      return true;
+    });
+  },
+
+  // ── Color / estado de 3 niveles ───────────────────────────
+
+  _nivel(pct) {
+    if (pct === null) return null;
+    if (pct >= this.UMBRAL_OK) return 'ok';
+    if (pct >= this.UMBRAL_MEDIO) return 'medio';
+    return 'critico';
+  },
+
+  _colorNivel(nivel) {
+    return { ok: 'var(--success)', medio: 'var(--warning)', critico: 'var(--danger)' }[nivel] || 'var(--text-3)';
+  },
+
+  _trackNivel(nivel) {
+    return {
+      ok:      'rgba(34,197,94,.18)',
+      medio:   'rgba(245,158,11,.18)',
+      critico: 'rgba(239,68,68,.18)',
+    }[nivel] || 'var(--border)';
+  },
+
+  _iconoNivel(nivel) {
+    return { ok: '✓', medio: '⚠', critico: '✗' }[nivel] || '–';
+  },
+
+  // ── Render ───────────────────────────────────────────────
+
+  _chips() {
+    const chip = (val, label, campo, actual) => `
+      <button onclick="PreceptorDashboard.filtrar('${campo}','${val}')"
+        style="padding:6px 14px;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;
+          border:1px solid ${actual === val ? 'var(--accent)' : 'var(--border)'};
+          background:${actual === val ? 'var(--accent)' : 'var(--bg-card)'};
+          color:${actual === val ? '#fff' : 'var(--text-2)'}">${label}</button>`;
+
+    return `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:24px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${chip('', 'Todos los años', 'anio', this._filtroAnio)}
+          ${[1, 2, 3, 4].map(y => chip(String(y), `${y}°`, 'anio', this._filtroAnio)).join('')}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:28px">${cardsAlumnos}</div>
-        <div class="empty-state"><div class="icon">📊</div><p>Todavía no hay asistencia registrada en ninguna materia.</p></div>`;
-      return;
-    }
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${chip('', 'Ambas divisiones', 'division', this._filtroDivision)}
+          ${chip('A', 'División A', 'division', this._filtroDivision)}
+          ${chip('B', 'División B', 'division', this._filtroDivision)}
+        </div>
+      </div>`;
+  },
 
+  _gaugeSvg(pct) {
+    const nivel = this._nivel(pct);
+    const color = this._colorNivel(nivel);
+    const r = 70, c = 2 * Math.PI * r;
+    const frac = pct === null ? 0 : Math.max(0, Math.min(100, pct)) / 100;
+    const offset = c * (1 - frac);
+    return `
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--border)" stroke-width="16"/>
+        <circle cx="90" cy="90" r="${r}" fill="none" stroke="${color}" stroke-width="16"
+          stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+          transform="rotate(-90 90 90)" style="transition:stroke-dashoffset .4s"/>
+        <text x="90" y="86" text-anchor="middle" style="font-size:2.1rem;font-weight:700;fill:var(--text-1)">${pct === null ? '—' : pct + '%'}</text>
+        <text x="90" y="110" text-anchor="middle" style="font-size:.72rem;fill:var(--text-3);text-transform:uppercase;letter-spacing:.05em">asistencia</text>
+      </svg>`;
+  },
+
+  _statTile(valor, label, color) {
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;flex:1;min-width:120px">
+        <div style="font-size:1.6rem;font-weight:700;color:${color || 'var(--text-1)'}">${valor}</div>
+        <div style="font-size:.74rem;color:var(--text-3);margin-top:2px">${label}</div>
+      </div>`;
+  },
+
+  _meterRow(label, pct, total) {
+    const nivel = this._nivel(pct);
+    const color = this._colorNivel(nivel);
+    const trackBg = this._trackNivel(nivel);
+    const width = pct === null ? 0 : pct;
+
+    let estadoTxt;
+    if (total === 0) estadoTxt = '<span style="color:var(--text-3)">Sin datos</span>';
+    else if (pct === null) estadoTxt = '<span style="color:var(--text-3)">Todo justificado</span>';
+    else estadoTxt = `<span style="color:${color};font-weight:700">${this._iconoNivel(nivel)} ${pct}%</span>`;
+
+    return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:.82rem;color:var(--text-1)">${label}</span>
+          <span style="font-size:.78rem">${estadoTxt}</span>
+        </div>
+        <div style="height:8px;border-radius:999px;background:${trackBg}">
+          <div style="height:100%;width:${width}%;border-radius:999px;background:${color};transition:width .4s"></div>
+        </div>
+      </div>`;
+  },
+
+  _grupoCard(titulo, grupos) {
+    if (!grupos.length) return '';
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:14px">${titulo}</div>
+        ${grupos.map(g => this._meterRow(g.label, g.pct, g.total)).join('')}
+      </div>`;
+  },
+
+  _agrupar(enriched, keyFn) {
+    const grupos = {};
+    enriched.forEach(e => { (grupos[keyFn(e)] = grupos[keyFn(e)] || []).push(e); });
+    return Object.entries(grupos).map(([label, recs]) => {
+      const { pct } = Asistencia.calcular(recs);
+      return { label, pct, total: recs.length };
+    }).sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1)); // peor primero
+  },
+
+  _render() {
+    const el = document.getElementById('dashboard-content');
+    const alumnos = this._alumnosFiltrados();
+    const enriched = this._enrichedFiltrado();
     const global = Asistencia.calcular(enriched);
 
-    const tabla = (titulo, grupos) => {
-      const filas = grupos.map(g => `
-        <tr><td class="text-main">${g.label}</td><td style="text-align:center">${g.total}</td><td>${Asistencia.badge(g.pct)}</td></tr>`).join('');
-      return `
-        <div style="margin-bottom:24px">
-          <div class="page-header" style="margin-bottom:8px"><h3 style="font-size:.95rem">${titulo}</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>${titulo}</th><th style="text-align:center">Clases</th><th>Asistencia</th></tr></thead>
-              <tbody>${filas}</tbody>
-            </table>
-          </div>
-        </div>`;
-    };
+    // Alumnos en riesgo (su propio % < umbral medio), de los que tienen al menos un dato
+    const porAlumno = {};
+    enriched.forEach(e => { (porAlumno[e.studentId] = porAlumno[e.studentId] || []).push(e); });
+    let alumnosEnRiesgo = 0;
+    Object.values(porAlumno).forEach(recs => {
+      const { pct } = Asistencia.calcular(recs);
+      if (pct !== null && pct < this.UMBRAL_MEDIO) alumnosEnRiesgo++;
+    });
 
-    const agrupar = keyFn => {
-      const grupos = {};
-      enriched.forEach(e => {
-        const k = keyFn(e);
-        (grupos[k] = grupos[k] || []).push(e);
-      });
-      return Object.entries(grupos).map(([label, recs]) => {
-        const { pct } = Asistencia.calcular(recs);
-        return { label, pct, total: recs.length };
-      }).sort((a, b) => a.label.localeCompare(b.label));
-    };
+    const porMateria  = this._agrupar(enriched, e => e.materia);
+    const materiasEnRiesgo = porMateria.filter(g => g.pct !== null && g.pct < this.UMBRAL_MEDIO).length;
 
-    const porMes = (() => {
-      const grupos = agrupar(e => e.fecha.slice(0, 7));
-      const nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      return grupos.map(g => ({ ...g, label: `${nombres[parseInt(g.label.slice(5, 7)) - 1]} ${g.label.slice(0, 4)}` }));
-    })();
+    const porAnio = this._agrupar(enriched, e => e.anio);
+    const porDivision = this._agrupar(enriched, e => e.division);
+    const porDia = this._agrupar(enriched, e => Asistencia.diaDeFecha(e.fecha));
+
+    const nombresMes = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const porMes = this._agrupar(enriched, e => e.fecha.slice(0, 7))
+      .map(g => ({ ...g, label: `${nombresMes[parseInt(g.label.slice(5, 7)) - 1]} ${g.label.slice(0, 4)}` }))
+      .sort((a, b) => a.label.localeCompare(b.label));
 
     el.innerHTML = `
       <div class="page-header"><h3>Dashboard</h3></div>
+      ${this._chips()}
 
-      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px">
-        Alumnos (${alumnos.length}) por año y división
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-bottom:28px">
+        <div style="flex-shrink:0">${this._gaugeSvg(global.pct)}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;flex:1;min-width:260px">
+          ${this._statTile(alumnos.length, 'Alumnos en esta vista', 'var(--text-1)')}
+          ${this._statTile(global.computadas + ' / ' + global.total, 'Registros computados / totales', 'var(--text-1)')}
+          ${this._statTile(materiasEnRiesgo, 'Materias en riesgo (<' + this.UMBRAL_MEDIO + '%)', materiasEnRiesgo ? 'var(--danger)' : 'var(--success)')}
+          ${this._statTile(alumnosEnRiesgo, 'Alumnos en riesgo (<' + this.UMBRAL_MEDIO + '%)', alumnosEnRiesgo ? 'var(--danger)' : 'var(--success)')}
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:24px">${cardsAlumnos}</div>
 
-      <div class="card" style="margin-bottom:28px;text-align:center">
-        <div style="font-size:.78rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:6px">Asistencia global de la institución</div>
-        <div style="font-size:1.8rem;font-weight:700;color:var(--text-1)">${global.pct ?? '—'}%</div>
-        <div style="font-size:.78rem;color:var(--text-3);margin-top:4px">${global.computadas} registros computados de ${global.total}</div>
-      </div>
-
-      ${tabla('Por materia',   agrupar(e => e.materia))}
-      ${tabla('Por año',       agrupar(e => e.anio))}
-      ${tabla('Por división',  agrupar(e => e.division))}
-      ${tabla('Por día de la semana', agrupar(e => Asistencia.diaDeFecha(e.fecha)))}
-      ${tabla('Por mes', porMes)}
+      ${enriched.length ? `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+          ${this._grupoCard('Por materia', porMateria)}
+          ${this._grupoCard('Por año', porAnio)}
+          ${this._grupoCard('Por división', porDivision)}
+          ${this._grupoCard('Por día de la semana', porDia)}
+          ${this._grupoCard('Por mes', porMes)}
+        </div>` : `
+        <div class="empty-state"><div class="icon">📊</div><p>No hay asistencia registrada todavía para este filtro.</p></div>`}
     `;
   },
 };
