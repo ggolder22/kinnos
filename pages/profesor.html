@@ -441,10 +441,15 @@
 <!-- Modal: Resultados del examen -->
 <div class="modal-backdrop hidden" id="exam-res-modal">
   <div class="modal" style="max-width:720px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
       <h4 id="exam-res-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">Resultados</h4>
-      <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.exportarResultados()">⬇ Exportar (CSV)</button>
       <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.cerrarResultados()">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <input type="text" id="exam-res-libro" placeholder="Libro N°" style="width:90px;padding:6px 8px;font-size:.8rem">
+      <input type="text" id="exam-res-folio" placeholder="Folio N°" style="width:90px;padding:6px 8px;font-size:.8rem">
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="ProfesorExamenes.exportarResultados()">⬇ CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.exportarResultadosPDF()">📄 Acta (PDF)</button>
     </div>
 
     <!-- Lista de resultados -->

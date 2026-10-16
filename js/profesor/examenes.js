@@ -469,6 +469,96 @@ const ProfesorExamenes = {
     );
   },
 
+  _numeroALetras(n) {
+    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
+    const entero  = Math.floor(n);
+    const decimal = Math.round((n - entero) * 10);
+    const base = PALABRAS[entero] ?? String(entero);
+    if (!decimal) return base;
+    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
+  },
+
+  exportarResultadosPDF() {
+    const todos = this._resultadosActuales || [];
+    const confirmados = todos.filter(r => r.status === 'confirmed');
+
+    if (!confirmados.length) { Utils.toast('Todavía no hay ningún resultado confirmado para generar el acta', 'error'); return; }
+
+    const pendientes = todos.length - confirmados.length;
+    if (pendientes > 0) {
+      Utils.toast(`El acta incluye solo los ${confirmados.length} ya confirmados — quedan ${pendientes} por revisar`, 'info');
+    }
+
+    const libro = document.getElementById('exam-res-libro').value.trim();
+    const folio = document.getElementById('exam-res-folio').value.trim();
+
+    const m = ProfesorState.materia;
+    const institucion = m.careers?.institutions?.name || '';
+    const carrera     = m.careers?.name || '';
+    const anioDiv = [m.year ? `${m.year}° año` : null, m.division ? `División ${m.division}` : null].filter(Boolean).join(' · ');
+
+    const filas = [...confirmados].sort((a, b) => Utils.nombrePlanilla(a.students).localeCompare(Utils.nombrePlanilla(b.students)));
+    const aprobados = filas.filter(r => ((r.professor_score ?? r.score) / 10) >= 6).length;
+
+    const rowsHtml = filas.map((r, i) => {
+      const finalScore = r.professor_score ?? r.score;
+      const grade = Math.round(finalScore / 10 * 10) / 10;
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${Utils.nombrePlanilla(r.students)}</td>
+        <td style="text-align:center">${grade}</td>
+        <td>${this._numeroALetras(grade)}</td>
+      </tr>`;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><title>Acta — ${this._examActual.title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 36px; color: #111; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h1 { font-size: 1.15rem; margin-bottom: 2px; }
+        .header p { font-size: .85rem; color: #444; margin: 1px 0; }
+        .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .85rem;
+          margin: 18px 0 10px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #999; padding: 6px 10px; font-size: .85rem; text-align: left; }
+        th { background: #eee; }
+        .resumen { margin-top: 14px; font-size: .82rem; }
+        .firmas { display: flex; justify-content: space-between; margin-top: 90px; }
+        .firma { width: 30%; text-align: center; font-size: .82rem; }
+        .firma .linea { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; }
+      </style></head><body>
+        <div class="header">
+          <h1>${institucion || 'Institución'}</h1>
+          ${carrera ? `<p>${carrera}</p>` : ''}
+          <p>Acta de examen${anioDiv ? ' — ' + anioDiv : ''}</p>
+        </div>
+
+        <div class="meta">
+          <span>Materia: <strong>${m.name || ''}</strong></span>
+          <span>Examen: <strong>${this._examActual.title}</strong></span>
+          <span>Libro N°: <strong>${libro || '______'}</strong> &nbsp;&nbsp; Folio N°: <strong>${folio || '______'}</strong></span>
+          <span>Fecha: ${Utils.formatDate(Utils.hoyLocal())}</span>
+        </div>
+
+        <table>
+          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>Nota</th><th>Nota en letras</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+
+        <div class="resumen">${filas.length} alumnos — ${aprobados} aprobados, ${filas.length - aprobados} desaprobados</div>
+
+        <div class="firmas">
+          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Docente</div>
+          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Vocal 1</div>
+          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Vocal 2</div>
+        </div>
+      </body></html>`);
+    win.document.close();
+    win.print();
+  },
+
   // ── Revisión individual ───────────────────────────────────
 
   async abrirRevision(resultId) {
