@@ -164,25 +164,82 @@ const ProfesorTrabajos = {
     document.getElementById('tp-entregas-modal').classList.add('hidden');
   },
 
+  _filtroAnio: '',
+  _filtroDivision: '',
+
   async _loadEntregas() {
     const el = document.getElementById('tp-entregas-body');
     el.innerHTML = '<div class="loading">Cargando…</div>';
 
     const { data: entregas } = await sb
       .from('assignment_submissions')
-      .select('*, students(full_name, first_name, last_name, dni)')
+      .select('*, students(full_name, first_name, last_name, dni, anio, division)')
       .eq('assignment_id', this._tpActual.id)
       .order('submitted_at', { ascending: false });
 
-    this._renderEntregas(entregas || []);
+    this._todasEntregas = entregas || [];
+    this._renderEntregas(this._aplicarFiltroEntregas());
+  },
+
+  _aplicarFiltroEntregas() {
+    return (this._todasEntregas || []).filter(e => {
+      const a = e.students;
+      if (this._filtroAnio && String(a?.anio || '') !== this._filtroAnio) return false;
+      if (this._filtroDivision && (a?.division || '') !== this._filtroDivision) return false;
+      return true;
+    });
+  },
+
+  filtrarEntregas(campo, value) {
+    if (campo === 'anio')     this._filtroAnio     = value;
+    if (campo === 'division') this._filtroDivision = value;
+    this._renderEntregas(this._aplicarFiltroEntregas());
+  },
+
+  exportarEntregas() {
+    const entregas = this._aplicarFiltroEntregas();
+    if (!entregas.length) { Utils.toast('No hay entregas para exportar con este filtro', 'error'); return; }
+    const filas = entregas.map(e => {
+      const a = e.students;
+      return [
+        Utils.nombrePlanilla(a), a?.dni || '', a?.anio ? `${a.anio}°` : '', a?.division || '',
+        e.status === 'reviewed' ? 'Revisado' : 'Pendiente', e.grade ?? '', Utils.formatDate(e.submitted_at),
+      ];
+    });
+    Utils.descargarCsv(
+      `entregas_${(this._tpActual.title || 'tp').replace(/[^a-z0-9]+/gi, '_')}.csv`,
+      ['Alumno', 'DNI', 'Año', 'División', 'Estado', 'Nota', 'Entregado'],
+      filas
+    );
   },
 
   _renderEntregas(entregas) {
     const el = document.getElementById('tp-entregas-body');
 
-    if (!entregas.length) {
-      el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:.85rem">
+    const filterBar = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select onchange="ProfesorTrabajos.filtrarEntregas('anio', this.value)" style="width:auto;padding:5px 10px">
+          <option value="">Todos los años</option>
+          ${[1, 2, 3, 4].map(y => `<option value="${y}" ${this._filtroAnio === String(y) ? 'selected' : ''}>${y}°</option>`).join('')}
+        </select>
+        <select onchange="ProfesorTrabajos.filtrarEntregas('division', this.value)" style="width:auto;padding:5px 10px">
+          <option value="">Ambas divisiones</option>
+          <option value="A" ${this._filtroDivision === 'A' ? 'selected' : ''}>División A</option>
+          <option value="B" ${this._filtroDivision === 'B' ? 'selected' : ''}>División B</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="ProfesorTrabajos.exportarEntregas()">⬇ Exportar (CSV)</button>
+      </div>`;
+
+    if (!this._todasEntregas?.length) {
+      el.innerHTML = `${filterBar}<div style="padding:32px;text-align:center;color:var(--text-3);font-size:.85rem">
         Ningún alumno entregó este trabajo todavía.
+      </div>`;
+      return;
+    }
+
+    if (!entregas.length) {
+      el.innerHTML = `${filterBar}<div style="padding:24px;text-align:center;color:var(--text-3);font-size:.85rem">
+        Ningún alumno coincide con el filtro.
       </div>`;
       return;
     }
@@ -212,7 +269,7 @@ const ProfesorTrabajos = {
         </div>`;
     }).join('');
 
-    el.innerHTML = `<div style="font-size:.73rem;color:var(--text-3);margin-bottom:8px;text-align:right">${entregas.length} entrega${entregas.length !== 1 ? 's' : ''}</div>${rows}`;
+    el.innerHTML = `${filterBar}<div style="font-size:.73rem;color:var(--text-3);margin-bottom:8px;text-align:right">${entregas.length} de ${this._todasEntregas.length} entrega${this._todasEntregas.length !== 1 ? 's' : ''}</div>${rows}`;
   },
 
   async _guardarRevision(subId) {

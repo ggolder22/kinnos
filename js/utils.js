@@ -61,6 +61,21 @@ const Utils = {
     return alumno.full_name || '';
   },
 
+  // Descarga un CSV: headers = ['Col1','Col2',...], filas = [[v1,v2,...], ...]
+  descargarCsv(nombreArchivo, headers, filas) {
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [headers.map(esc).join(','), ...filas.map(f => f.map(esc).join(','))].join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
   // Renderiza <option> en un <select>
   fillSelect(selectId, items, valueKey, labelKey, placeholderText) {
     const sel = document.getElementById(selectId);

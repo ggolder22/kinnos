@@ -245,7 +245,10 @@ const ProfesorExamenes = {
             <div style="font-size:.85rem;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${truncated}</div>
             <div style="font-size:.73rem;color:var(--text-3);margin-top:2px">Correcta: <strong>${p.correct_answer}</strong></div>
           </div>
-          <button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="ProfesorExamenes.eliminarPregunta('${p.id}')">✕</button>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick='ProfesorExamenes.abrirPreguntaForm(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="ProfesorExamenes.eliminarPregunta('${p.id}')">✕</button>
+          </div>
         </div>`;
     }).join('');
 
@@ -256,16 +259,30 @@ const ProfesorExamenes = {
       : `<div style="padding:24px;text-align:center;color:var(--text-3);font-size:.85rem">No hay preguntas. Agregá la primera.</div>`;
   },
 
-  abrirPreguntaForm() {
+  abrirPreguntaForm(item = null) {
     const f = document.getElementById('exampreg-form');
     f.classList.remove('hidden');
-    document.getElementById('exampreg-type').value     = 'multiple';
-    document.getElementById('exampreg-texto').value    = '';
-    document.getElementById('exampreg-correcta').value = '';
-    document.getElementById('exampreg-points').value   = '1';
-    document.getElementById('exampreg-opciones').value = '';
+    this._quitarImagenFlag = false;
+
+    document.getElementById('exampreg-id').value       = item?.id            || '';
+    document.getElementById('exampreg-type').value     = item?.type          || 'multiple';
+    document.getElementById('exampreg-texto').value    = item?.question_text || '';
+    document.getElementById('exampreg-correcta').value = item?.correct_answer || '';
+    document.getElementById('exampreg-points').value   = item?.points        || '1';
+    document.getElementById('exampreg-opciones').value = Array.isArray(item?.options) ? item.options.join('\n') : '';
     document.getElementById('exampreg-img-file').value = '';
-    document.getElementById('exampreg-img-actual').style.display = 'none';
+
+    document.getElementById('exampreg-form-title').textContent = item ? 'Editar pregunta' : 'Nueva pregunta';
+    document.getElementById('exampreg-save').textContent       = item ? 'Guardar cambios' : 'Agregar';
+
+    const imgActual = document.getElementById('exampreg-img-actual');
+    if (item?.image_url) {
+      document.getElementById('exampreg-img-preview').src = item.image_url;
+      imgActual.style.display = 'flex';
+    } else {
+      imgActual.style.display = 'none';
+    }
+
     this._togglePregType();
     document.getElementById('exampreg-texto').focus();
   },
@@ -273,6 +290,7 @@ const ProfesorExamenes = {
   _previsualizarImagenPregunta() {
     const file = document.getElementById('exampreg-img-file').files[0];
     if (!file) return;
+    this._quitarImagenFlag = false;
     const reader = new FileReader();
     reader.onload = e => {
       document.getElementById('exampreg-img-preview').src = e.target.result;
@@ -284,6 +302,7 @@ const ProfesorExamenes = {
   _quitarImagenPregunta() {
     document.getElementById('exampreg-img-file').value = '';
     document.getElementById('exampreg-img-actual').style.display = 'none';
+    this._quitarImagenFlag = true; // si estaba editando, esto saca la imagen que ya tenía guardada
   },
 
   _togglePregType() {
@@ -295,6 +314,7 @@ const ProfesorExamenes = {
 
   async guardarPregunta() {
     const btn      = document.getElementById('exampreg-save');
+    const id       = document.getElementById('exampreg-id').value;
     const type     = document.getElementById('exampreg-type').value;
     const texto    = document.getElementById('exampreg-texto').value.trim();
     const correcta = document.getElementById('exampreg-correcta').value.trim();
@@ -303,14 +323,9 @@ const ProfesorExamenes = {
     if (!texto)    { Utils.toast('El enunciado es obligatorio', 'error'); return; }
     if (!correcta) { Utils.toast('La respuesta correcta es obligatoria', 'error'); return; }
 
-    const { count } = await sb.from('exam_questions')
-      .select('*', { count: 'exact', head: true })
-      .eq('exam_id', this._examActual.id);
-
     const payload = {
-      exam_id: this._examActual.id,
-      order_num: (count || 0) + 1,
       type, question_text: texto, correct_answer: correcta, points,
+      options: null,
     };
 
     if (type === 'multiple') {
@@ -318,6 +333,14 @@ const ProfesorExamenes = {
         .split('\n').map(s => s.trim()).filter(Boolean);
       if (opts.length < 2) { Utils.toast('Ingresá al menos 2 opciones', 'error'); return; }
       payload.options = opts;
+    }
+
+    if (!id) {
+      const { count } = await sb.from('exam_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('exam_id', this._examActual.id);
+      payload.exam_id = this._examActual.id;
+      payload.order_num = (count || 0) + 1;
     }
 
     Utils.btnLoading(btn, true);
@@ -336,13 +359,17 @@ const ProfesorExamenes = {
       }
       const { data: { publicUrl } } = sb.storage.from('materiales').getPublicUrl(uploadData.path);
       payload.image_url = publicUrl;
+    } else if (this._quitarImagenFlag) {
+      payload.image_url = null;
     }
 
-    const { error } = await sb.from('exam_questions').insert(payload);
+    const { error } = id
+      ? await sb.from('exam_questions').update(payload).eq('id', id)
+      : await sb.from('exam_questions').insert(payload);
     Utils.btnLoading(btn, false);
 
     if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
-    Utils.toast('Pregunta agregada');
+    Utils.toast(id ? 'Pregunta actualizada' : 'Pregunta agregada');
     document.getElementById('exampreg-form').classList.add('hidden');
     this._loadPreguntas();
   },
@@ -382,6 +409,8 @@ const ProfesorExamenes = {
       .neq('status', 'in_progress')
       .order('submitted_at', { ascending: false });
 
+    this._resultadosActuales = resultados || [];
+
     if (!resultados?.length) {
       el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:.85rem">
         Ningún alumno ha enviado el examen todavía.
@@ -417,6 +446,26 @@ const ProfesorExamenes = {
     }).join('');
 
     el.innerHTML = rows;
+  },
+
+  exportarResultados() {
+    const resultados = this._resultadosActuales || [];
+    if (!resultados.length) { Utils.toast('No hay resultados para exportar', 'error'); return; }
+
+    const filas = resultados.map(r => {
+      const finalScore = r.professor_score ?? r.score;
+      const grade = Math.round(finalScore / 10 * 10) / 10;
+      return [
+        Utils.nombrePlanilla(r.students), grade,
+        r.status === 'confirmed' ? 'Confirmado' : 'Pendiente', Utils.formatDate(r.submitted_at),
+      ];
+    });
+
+    Utils.descargarCsv(
+      `resultados_${(this._examActual.title || 'examen').replace(/[^a-z0-9]+/gi, '_')}.csv`,
+      ['Alumno', 'Nota (/10)', 'Estado', 'Entregado'],
+      filas
+    );
   },
 
   // ── Revisión individual ───────────────────────────────────

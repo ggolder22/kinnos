@@ -117,7 +117,7 @@ const PreceptorNotas = {
       const grade = Math.round(finalScore / 10 * 10) / 10;
       return [Utils.nombrePlanilla(a), a.dni, r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
     });
-    this._descargarCsv(`notas_${a.dni}.csv`, ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
+    Utils.descargarCsv(`notas_${a.dni}.csv`, ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
   async descargarTodo() {
@@ -144,20 +144,7 @@ const PreceptorNotas = {
       return [Utils.nombrePlanilla(a), a?.dni || '', r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
     });
 
-    this._descargarCsv('notas_institucion.csv', ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
+    Utils.descargarCsv('notas_institucion.csv', ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
-  _descargarCsv(nombreArchivo, headers, filas) {
-    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const csv = [headers.map(esc).join(','), ...filas.map(f => f.map(esc).join(','))].join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nombreArchivo;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  },
 };

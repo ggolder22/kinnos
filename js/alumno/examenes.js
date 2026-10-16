@@ -137,12 +137,14 @@ const AlumnoExamenes = {
         return;
       }
       if (!existing) {
-        await sb.from('exam_results').insert({
+        // upsert con ignoreDuplicates (no insert plano): si dos pestañas/clicks
+        // casi simultáneos llegan a la vez, solo una fila termina existiendo.
+        await sb.from('exam_results').upsert({
           student_id: session.id,
           exam_id:    examId,
           status:     'in_progress',
           started_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'student_id,exam_id', ignoreDuplicates: true });
       }
     }
 
