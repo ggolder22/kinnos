@@ -10,16 +10,19 @@ const AlumnoExamenes = {
     el.innerHTML = '<div class="loading">Cargando…</div>';
     const session = Auth.session();
 
-    const { data: examenes, error } = await sb
+    // Traemos TODOS los exámenes (no solo los activos): si el profesor desactiva
+    // un examen después de tomarlo, el alumno igual tiene que poder seguir viendo
+    // su nota y su corrección — abajo se filtra para no mostrar los inactivos en
+    // los que el alumno nunca participó.
+    const { data: todos, error } = await sb
       .from('exams')
       .select('*, exam_questions(count)')
       .eq('subject_id', AlumnoState.materia.id)
-      .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) { Utils.toast('Error al cargar exámenes', 'error'); return; }
 
-    const examIds = (examenes || []).map(e => e.id);
+    const examIds = (todos || []).map(e => e.id);
     let resultados = {};
     if (examIds.length) {
       const { data: res } = await sb
@@ -30,7 +33,8 @@ const AlumnoExamenes = {
       (res || []).forEach(r => { resultados[r.exam_id] = r; });
     }
 
-    this._render(examenes || [], resultados);
+    const examenes = (todos || []).filter(e => e.is_active || resultados[e.id]);
+    this._render(examenes, resultados);
   },
 
   _render(examenes, resultados) {
