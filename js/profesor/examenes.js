@@ -686,13 +686,9 @@ const ProfesorExamenes = {
     if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
     Utils.toast('Resultado confirmado. El alumno ya puede verlo.');
 
-    if (this._revisionData) {
-      this._revisionData.resultado.status             = 'confirmed';
-      this._revisionData.resultado.professor_score    = notaFinal;
-      this._revisionData.resultado.professor_notes    = notas || null;
-      this._revisionData.resultado.professor_adjustments = adj;
-    }
-    this._renderRevision();
+    // Vuelve a la lista (que se refresca contra la base al volver) en vez de quedarse
+    // en el detalle — así no queda la lista de atrás mostrando el estado viejo.
+    this._volverLista();
   },
 
   _nombreArchivo(url) {
