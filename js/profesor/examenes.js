@@ -815,7 +815,7 @@ CORRECTA: [respuesta esperada]
 PUNTOS: 2
 
 Reglas que debés respetar sin excepción:
-- Para opción múltiple: CORRECTA debe tener solo la letra (a, b, c o d)
+- Para opción múltiple: podés poner 2 o más opciones (a, b, c, d, e...) — no hay un máximo fijo. CORRECTA debe tener solo la letra de la opción correcta.
 - Para verdadero/falso: CORRECTA debe ser exactamente "Verdadero" o "Falso"
 - Para respuesta corta: no pongas opciones, solo CORRECTA con la respuesta esperada
 - No agregues texto extra, explicaciones ni numeración fuera del formato
@@ -1005,7 +1005,7 @@ Mis instrucciones para el examen:
       .replace(/\s*(CORRECTA\s*:)/gi,      '\nCORRECTA:')
       .replace(/\s*(PUNTOS?\s*:)/gi,       '\nPUNTOS:')
       .replace(/\s*(P\s*\d+\s*[.\-:])/gi,  '\n$1')
-      .replace(/\n([a-dA-D])\s*[).\-]\s+/g, '\n$1) ');
+      .replace(/\n([a-zA-Z])\s*[).\-]\s+/g, '\n$1) ');
 
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const result = { title: '', time_limit: null, instructions: '', questions: [] };
@@ -1031,9 +1031,9 @@ Mis instrucciones para el examen:
           points:        1,
         };
 
-      } else if (/^[a-d]\)\s+/i.test(line) && currentQ) {
+      } else if (/^[a-z]\)\s+/i.test(line) && currentQ) {
         currentQ.type = 'multiple';
-        currentQ.options.push(line.replace(/^[a-d]\)\s+/i, '').trim());
+        currentQ.options.push(line.replace(/^[a-z]\)\s+/i, '').trim());
 
       } else if (/^CORRECTA\s*:/i.test(line) && currentQ) {
         currentQ._rawCorrect = line.replace(/^CORRECTA\s*:\s*/i, '').trim();
@@ -1056,7 +1056,7 @@ Mis instrucciones para el examen:
     const raw = (q._rawCorrect || '').trim();
 
     if (q.type === 'multiple' && q.options.length > 0) {
-      if (/^[a-d]$/i.test(raw)) {
+      if (/^[a-z]$/i.test(raw)) {
         const idx = raw.toLowerCase().charCodeAt(0) - 97;
         q.correct_answer = q.options[idx] ?? raw;
       } else {
@@ -1090,7 +1090,7 @@ Mis instrucciones para el examen:
                  background:${isCorrect ? 'rgba(34,197,94,.15)' : 'var(--bg-base)'};
                  border:1px solid ${isCorrect ? 'var(--success)' : 'var(--border)'};
                  color:${isCorrect ? 'var(--success)' : 'var(--text-2)'}">
-                 ${'abcd'[oi]}) ${o}
+                 ${String.fromCharCode(97 + oi)}) ${o}
                </span>`;
              }).join('')}
            </div>`
