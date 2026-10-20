@@ -22,6 +22,9 @@ const AlumnoExamenes = {
 
     if (error) { Utils.toast('Error al cargar exámenes', 'error'); return; }
 
+    const { data: yo } = await sb.from('students').select('division').eq('id', session.id).single();
+    const miDivision = yo?.division || null;
+
     const examIds = (todos || []).map(e => e.id);
     let resultados = {};
     if (examIds.length) {
@@ -33,7 +36,12 @@ const AlumnoExamenes = {
       (res || []).forEach(r => { resultados[r.exam_id] = r; });
     }
 
-    const examenes = (todos || []).filter(e => e.is_active || resultados[e.id]);
+    // Si la materia es compartida entre divisiones y el examen es solo para
+    // una de ellas, solo lo ve el alumno de esa división (o cualquiera, si
+    // el alumno todavía no tiene división definida — no le ocultamos nada).
+    const examenes = (todos || [])
+      .filter(e => e.is_active || resultados[e.id])
+      .filter(e => !e.division || !miDivision || e.division === miDivision);
     this._render(examenes, resultados);
   },
 

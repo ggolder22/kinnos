@@ -61,10 +61,13 @@ const ProfesorExamenes = {
       const pendBadge = pend > 0
         ? `<span class="badge badge-practice" style="font-size:.65rem;margin-left:6px">${pend} para revisar</span>`
         : '';
+      const divBadge = e.division
+        ? `<span class="badge badge-inactive" style="font-size:.65rem;margin-left:6px">División ${e.division}</span>`
+        : '';
 
       return `
         <tr>
-          <td class="text-main">${e.title}</td>
+          <td class="text-main">${e.title}${divBadge}</td>
           <td>${estadoBadge}</td>
           <td style="text-align:center">${cantPreg}</td>
           <td>${e.time_limit ? `${e.time_limit} min` : '—'}</td>
@@ -105,6 +108,7 @@ const ProfesorExamenes = {
     document.getElementById('exam-modal-tiempo').value      = item?.time_limit   || '';
     document.getElementById('exam-modal-instruc').value     = item?.instructions || '';
     document.getElementById('exam-modal-practica').checked  = item?.is_practice  || false;
+    document.getElementById('exam-modal-division').value    = item?.division    || '';
     document.getElementById('exam-modal-pdf-file').value    = '';
 
     const pdfActual = document.getElementById('exam-pdf-actual');
@@ -137,6 +141,7 @@ const ProfesorExamenes = {
     const time_limit = parseInt(document.getElementById('exam-modal-tiempo').value) || null;
     const instruc    = document.getElementById('exam-modal-instruc').value.trim();
     const is_practice = document.getElementById('exam-modal-practica').checked;
+    const division   = document.getElementById('exam-modal-division').value || null;
     const fileInput  = document.getElementById('exam-modal-pdf-file');
     const file       = fileInput.files[0];
 
@@ -165,6 +170,7 @@ const ProfesorExamenes = {
       time_limit: is_practice ? null : time_limit,
       instructions: instruc || null,
       is_practice,
+      division,
       subject_id: ProfesorState.materia.id,
       ...(pdf_url ? { pdf_url } : {}),
     };
@@ -396,6 +402,14 @@ const ProfesorExamenes = {
 
   cerrarResultados() {
     document.getElementById('exam-res-modal').classList.add('hidden');
+    // Limpieza total: si se cierra con la ✕ en vez de "← Volver" (por ejemplo,
+    // en medio de una corrección sin guardar), esto evita que los datos del
+    // alumno/examen que se estaba revisando queden pegados en memoria y se
+    // mezclen con el próximo examen que se abra.
+    document.getElementById('exam-revision-view').classList.add('hidden');
+    document.getElementById('exam-res-list').classList.remove('hidden');
+    this._revisionData = null;
+    this._examActual = null;
     this.init(); // refresca el contador "para revisar" de la lista principal
   },
 
@@ -567,11 +581,19 @@ const ProfesorExamenes = {
     revView.classList.remove('hidden');
     revView.innerHTML = '<div class="loading" style="padding:40px;text-align:center">Cargando…</div>';
 
-    const { data: resultado } = await sb
+    const { data: resultado, error: errResultado } = await sb
       .from('exam_results')
       .select('*, students(full_name, first_name, last_name, dni)')
       .eq('id', resultId)
       .single();
+
+    if (errResultado || !resultado) {
+      revView.innerHTML = `<div style="padding:40px;text-align:center;color:var(--danger)">
+        No se pudo cargar esta entrega (puede ser un problema de conexión). Volvé a intentar.
+        <div style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes._volverLista()">← Volver</button></div>
+      </div>`;
+      return;
+    }
 
     const { data: preguntas } = await sb
       .from('exam_questions')
@@ -1139,6 +1161,14 @@ Mis instrucciones para el examen:
           <input type="checkbox" id="imp-practica" style="width:auto">
           <label for="imp-practica" style="text-transform:none;font-size:.875rem;cursor:pointer">Es examen de práctica (sin nota, repetible)</label>
         </div>
+        <div class="form-group" style="margin:12px 0 0">
+          <label>¿Para qué división es este examen?</label>
+          <select id="imp-division">
+            <option value="">Ambas divisiones (A y B)</option>
+            <option value="A">Solo división A</option>
+            <option value="B">Solo división B</option>
+          </select>
+        </div>
       </div>
 
       <!-- Lista de preguntas -->
@@ -1171,6 +1201,7 @@ Mis instrucciones para el examen:
     const time_limit   = parseInt(document.getElementById('imp-tiempo')?.value) || null;
     const instructions = this._importData.instructions || null;
     const is_practice  = document.getElementById('imp-practica')?.checked || false;
+    const division     = document.getElementById('imp-division')?.value || null;
 
     Utils.btnLoading(btn, true);
 
@@ -1181,6 +1212,7 @@ Mis instrucciones para el examen:
       time_limit: is_practice ? null : time_limit,
       instructions,
       is_practice,
+      division,
     }).select().single();
 
     if (examErr) {
