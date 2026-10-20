@@ -3,6 +3,7 @@ const PreceptorDashboard = {
   _enriched: [], // [{ status, materia, anio, division, fecha, studentId }]
   _filtroAnio: '',
   _filtroDivision: '',
+  _vista: 'asistencia', // 'asistencia' | 'alumnos'
 
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
   UMBRAL_OK: 80,
@@ -65,6 +66,27 @@ const PreceptorDashboard = {
     }).filter(Boolean);
 
     this._render();
+  },
+
+  // ── Menú de vista ──────────────────────────────────────────
+
+  cambiarVista(v) {
+    this._vista = v;
+    this._render();
+  },
+
+  _vistaMenu() {
+    const tab = (val, label, icon) => `
+      <button onclick="PreceptorDashboard.cambiarVista('${val}')"
+        style="padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;
+          border:1px solid ${this._vista === val ? 'var(--accent)' : 'var(--border)'};
+          background:${this._vista === val ? 'var(--accent)' : 'var(--bg-card)'};
+          color:${this._vista === val ? '#fff' : 'var(--text-2)'}">${icon} ${label}</button>`;
+    return `
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        ${tab('asistencia', 'Asistencia', '📋')}
+        ${tab('alumnos', 'Alumnos', '👥')}
+      </div>`;
   },
 
   // ── Filtros ──────────────────────────────────────────────
@@ -206,7 +228,101 @@ const PreceptorDashboard = {
     }).sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1)); // peor primero
   },
 
+  // ── Gauge / barras para conteo de alumnos (sin semántica de riesgo) ──
+
+  _gaugeSvgCount(count, pct) {
+    const color = 'var(--accent)';
+    const r = 70, c = 2 * Math.PI * r;
+    const frac = pct === null ? 0 : Math.max(0, Math.min(100, pct)) / 100;
+    const offset = c * (1 - frac);
+    return `
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--border)" stroke-width="16"/>
+        <circle cx="90" cy="90" r="${r}" fill="none" stroke="${color}" stroke-width="16"
+          stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+          transform="rotate(-90 90 90)" style="transition:stroke-dashoffset .4s"/>
+        <text x="90" y="86" text-anchor="middle" style="font-size:1.9rem;font-weight:700;fill:var(--text-1)">${count}</text>
+        <text x="90" y="110" text-anchor="middle" style="font-size:.72rem;fill:var(--text-3);text-transform:uppercase;letter-spacing:.05em">alumnos${pct !== null ? ' · ' + pct + '%' : ''}</text>
+      </svg>`;
+  },
+
+  _meterRowCount(label, total, max) {
+    const width = max ? Math.round(total / max * 100) : 0;
+    return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:.82rem;color:var(--text-1)">${label}</span>
+          <span style="font-size:.78rem;font-weight:700;color:var(--text-1)">${total}</span>
+        </div>
+        <div style="height:8px;border-radius:999px;background:var(--border)">
+          <div style="height:100%;width:${width}%;border-radius:999px;background:var(--accent);transition:width .4s"></div>
+        </div>
+      </div>`;
+  },
+
+  _grupoCardCount(titulo, grupos) {
+    if (!grupos.length) return '';
+    const max = Math.max(...grupos.map(g => g.total), 1);
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:14px">${titulo}</div>
+        ${grupos.map(g => this._meterRowCount(g.label, g.total, max)).join('')}
+      </div>`;
+  },
+
+  _agruparAlumnos(alumnos, keyFn) {
+    const grupos = {};
+    alumnos.forEach(a => { const k = keyFn(a); (grupos[k] = grupos[k] || []).push(a); });
+    return Object.entries(grupos)
+      .map(([label, recs]) => ({ label, total: recs.length }))
+      .sort((a, b) => b.total - a.total);
+  },
+
+  _renderAlumnos() {
+    const el = document.getElementById('dashboard-content');
+    const totalInst = this._alumnos.length;
+    const alumnos = this._alumnosFiltrados();
+    const count = alumnos.length;
+    const pct = totalInst ? Math.round(count / totalInst * 100) : null;
+
+    const sinAnio     = alumnos.filter(a => !a.anio).length;
+    const sinDivision = alumnos.filter(a => !a.division).length;
+
+    const porAnio          = this._agruparAlumnos(alumnos, a => a.anio ? `${a.anio}°` : 'Sin año');
+    const porDivision       = this._agruparAlumnos(alumnos, a => a.division || 'Sin división');
+    const porAnioDivision  = this._agruparAlumnos(alumnos, a => `${a.anio ? a.anio + '°' : 'Sin año'}${a.division ? ' ' + a.division : ''}`);
+
+    el.innerHTML = `
+      <div class="page-header"><h3>Dashboard</h3></div>
+      ${this._vistaMenu()}
+      ${this._chips()}
+
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-bottom:28px">
+        <div style="flex-shrink:0">${this._gaugeSvgCount(count, pct)}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;flex:1;min-width:260px">
+          ${this._statTile(totalInst, 'Total en la institución', 'var(--text-1)')}
+          ${this._statTile(count, 'Alumnos en esta vista', 'var(--accent)')}
+          ${this._statTile(sinAnio, 'Sin año cargado', sinAnio ? 'var(--warning)' : 'var(--success)')}
+          ${this._statTile(sinDivision, 'Sin división cargada', sinDivision ? 'var(--warning)' : 'var(--success)')}
+        </div>
+      </div>
+
+      ${count ? `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+          ${this._grupoCardCount('Por año', porAnio)}
+          ${this._grupoCardCount('Por división', porDivision)}
+          ${this._grupoCardCount('Por año y división', porAnioDivision)}
+        </div>` : `
+        <div class="empty-state"><div class="icon">👥</div><p>No hay alumnos para este filtro.</p></div>`}
+    `;
+  },
+
   _render() {
+    if (this._vista === 'alumnos') { this._renderAlumnos(); return; }
+    this._renderAsistencia();
+  },
+
+  _renderAsistencia() {
     const el = document.getElementById('dashboard-content');
     const alumnos = this._alumnosFiltrados();
     const enriched = this._enrichedFiltrado();
@@ -235,6 +351,7 @@ const PreceptorDashboard = {
 
     el.innerHTML = `
       <div class="page-header"><h3>Dashboard</h3></div>
+      ${this._vistaMenu()}
       ${this._chips()}
 
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-bottom:28px">
