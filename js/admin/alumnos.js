@@ -1,5 +1,6 @@
 const AdminAlumnos = {
   _todos: [],
+  _instituciones: [], // [{id, name}] distintas entre los alumnos cargados
 
   async init() {
     const el = document.getElementById('alumnos-content');
@@ -12,23 +13,59 @@ const AdminAlumnos = {
     if (error) { Utils.toast('Error al cargar alumnos', 'error'); return; }
     // Orden alfabético por apellido (criterio ministerio), con los que todavía no lo tienen separado al final
     this._todos = (data || []).sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
-    this._render(this._todos);
+
+    const vistos = new Map();
+    this._todos.forEach(a => { if (a.institution_id && !vistos.has(a.institution_id)) vistos.set(a.institution_id, a.institutions?.name || '—'); });
+    this._instituciones = [...vistos.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+
+    this._render();
   },
 
-  _render(data) {
+  _render() {
     const el = document.getElementById('alumnos-content');
-    const addBtn = `<button class="btn btn-primary btn-sm" onclick="AdminAlumnos.openModal()">+ Nuevo alumno</button>`;
-
-    const searchBar = `
-      <div style="margin-bottom:16px">
-        <input type="text" id="alumno-search" placeholder="Buscar por nombre o DNI…"
-          oninput="AdminAlumnos._filtrar(this.value)"
-          style="width:100%;max-width:340px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-1);font-size:.875rem;outline:none">
+    const addBtn = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="AdminAlumnosImport.abrir()">📥 Importar desde Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="AdminAlumnos.openModal()">+ Nuevo alumno</button>
       </div>`;
 
+    const filtrosBar = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <input type="text" id="alumno-search" placeholder="Buscar por nombre o DNI…"
+          oninput="AdminAlumnos._aplicarFiltros()"
+          style="flex:1;min-width:200px;max-width:340px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-1);font-size:.875rem;outline:none">
+        <select id="alumno-filtro-anio" onchange="AdminAlumnos._aplicarFiltros()" style="width:auto;padding:7px 10px">
+          <option value="">Todos los años</option>
+          ${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}">${n}°</option>`).join('')}
+        </select>
+        <select id="alumno-filtro-division" onchange="AdminAlumnos._aplicarFiltros()" style="width:auto;padding:7px 10px">
+          <option value="">Todas las divisiones</option>
+          <option value="A">División A</option>
+          <option value="B">División B</option>
+        </select>
+        <select id="alumno-filtro-inst" onchange="AdminAlumnos._aplicarFiltros()" style="width:auto;padding:7px 10px">
+          <option value="">Todas las instituciones</option>
+          <option value="__sin__">Sin institución</option>
+          ${this._instituciones.map(i => `<option value="${i.id}">${i.name}</option>`).join('')}
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="AdminAlumnos._limpiarFiltros()">Limpiar filtros</button>
+      </div>`;
+
+    el.innerHTML = `
+      <div class="page-header"><h3>Alumnos</h3>${addBtn}</div>
+      ${filtrosBar}
+      <div id="alumnos-tabla"></div>`;
+
+    this._renderTabla(this._todos);
+  },
+
+  _renderTabla(data) {
+    const el = document.getElementById('alumnos-tabla');
+    const header = document.querySelector('#alumnos-content .page-header h3');
+    if (header) header.innerHTML = `Alumnos <span style="font-size:.85rem;font-weight:400;color:var(--text-3)">(${data.length})</span>`;
+
     if (!data.length) {
-      el.innerHTML = `<div class="page-header"><h3>Alumnos</h3>${addBtn}</div>${searchBar}
-        <div class="empty-state"><div class="icon">👥</div><p>No se encontraron alumnos.</p></div>`;
+      el.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No se encontraron alumnos.</p></div>`;
       return;
     }
 
@@ -49,8 +86,6 @@ const AdminAlumnos = {
       </tr>`).join('');
 
     el.innerHTML = `
-      <div class="page-header"><h3>Alumnos <span style="font-size:.85rem;font-weight:400;color:var(--text-3)">(${data.length})</span></h3>${addBtn}</div>
-      ${searchBar}
       <div class="table-wrap">
         <table>
           <thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Curso</th><th>Institución</th><th>Acciones</th></tr></thead>
@@ -59,15 +94,30 @@ const AdminAlumnos = {
       </div>`;
   },
 
-  _filtrar(q) {
-    const lower = q.toLowerCase();
-    const filtrados = this._todos.filter(a =>
-      a.full_name.toLowerCase().includes(lower) || a.dni.includes(lower)
-    );
-    this._render(filtrados);
-    // Restaurar el valor del input ya que _render lo recrea
-    const inp = document.getElementById('alumno-search');
-    if (inp) { inp.value = q; inp.focus(); }
+  _aplicarFiltros() {
+    const q        = document.getElementById('alumno-search').value.toLowerCase();
+    const anio     = document.getElementById('alumno-filtro-anio').value;
+    const division = document.getElementById('alumno-filtro-division').value;
+    const inst     = document.getElementById('alumno-filtro-inst').value;
+
+    const filtrados = this._todos.filter(a => {
+      if (q && !(a.full_name.toLowerCase().includes(q) || a.dni.includes(q))) return false;
+      if (anio && String(a.anio || '') !== anio) return false;
+      if (division && a.division !== division) return false;
+      if (inst === '__sin__' && a.institution_id) return false;
+      if (inst && inst !== '__sin__' && a.institution_id !== inst) return false;
+      return true;
+    });
+
+    this._renderTabla(filtrados);
+  },
+
+  _limpiarFiltros() {
+    document.getElementById('alumno-search').value = '';
+    document.getElementById('alumno-filtro-anio').value = '';
+    document.getElementById('alumno-filtro-division').value = '';
+    document.getElementById('alumno-filtro-inst').value = '';
+    this._renderTabla(this._todos);
   },
 
   async openModal(item = null) {
