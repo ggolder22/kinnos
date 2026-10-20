@@ -29,7 +29,7 @@
         <span class="icon">🗓️</span> Asistencia
       </div>
       <div class="nav-item" id="nav-notas" onclick="showPage('notas')">
-        <span class="icon">📝</span> Notas
+        <span class="icon">📝</span> Calificaciones
       </div>
       <div class="nav-item" id="nav-calendario" onclick="showPage('calendario')">
         <span class="icon">🚫</span> Calendario
@@ -118,7 +118,7 @@
   const session = Auth.session();
   document.getElementById('preceptor-greeting').textContent = session.nombre || `DNI ${session.dni}`;
 
-  const titles = { dashboard: 'Dashboard', alumnos: 'Alumnos', asistencia: 'Asistencia', notas: 'Notas', calendario: 'Calendario' };
+  const titles = { dashboard: 'Dashboard', alumnos: 'Alumnos', asistencia: 'Asistencia', notas: 'Calificaciones', calendario: 'Calendario' };
   const modulos = { dashboard: PreceptorDashboard, alumnos: PreceptorAlumnos, asistencia: PreceptorAsistencia, notas: PreceptorNotas, calendario: PreceptorCalendario };
 
   function showPage(nombre) {

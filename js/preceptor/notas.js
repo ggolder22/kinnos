@@ -1,45 +1,98 @@
 const PreceptorNotas = {
   _alumnoActual: null,
+  _filtroAnio: '',
+  _filtroDivision: '',
+  _filtroQ: '',
 
   async init() {
     if (this._alumnoActual) return this._renderAlumno();
-    this._renderBuscador();
+    await this._renderBuscador();
   },
 
-  _renderBuscador() {
+  async _renderBuscador() {
     const el = document.getElementById('notas-content');
     el.innerHTML = `
-      <div class="page-header"><h3>Notas</h3>
-        <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarTodo()">⬇ Descargar notas de la institución (CSV)</button>
-      </div>
-      <div class="card" style="max-width:480px">
-        <div class="form-group" style="margin-bottom:10px">
-          <label>Buscar alumno por nombre o DNI</label>
-          <input type="text" id="prec-notas-buscar" placeholder="Ej: Pérez o 40123456"
-            oninput="PreceptorNotas._buscar(this.value)">
+      <div class="page-header"><h3>Calificaciones</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarTodo()">⬇ Excel (CSV)</button>
+          <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarActaPDF()">📄 Acta (PDF)</button>
         </div>
-        <div id="prec-notas-resultados"></div>
-      </div>`;
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0;min-width:200px;flex:1">
+            <label>Buscar por nombre o DNI</label>
+            <input type="text" id="prec-notas-buscar" placeholder="Ej: Pérez o 40123456" value="${this._filtroQ}"
+              oninput="PreceptorNotas._filtrar('q', this.value)">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Año</label>
+            <select id="prec-notas-anio" onchange="PreceptorNotas._filtrar('anio', this.value)" style="width:auto;padding:7px 10px">
+              <option value="">Todos</option>
+              ${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}" ${this._filtroAnio === String(n) ? 'selected' : ''}>${n}°</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>División</label>
+            <select id="prec-notas-division" onchange="PreceptorNotas._filtrar('division', this.value)" style="width:auto;padding:7px 10px">
+              <option value="">Todas</option>
+              <option value="A" ${this._filtroDivision === 'A' ? 'selected' : ''}>A</option>
+              <option value="B" ${this._filtroDivision === 'B' ? 'selected' : ''}>B</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="prec-notas-resultados"></div>`;
+
+    await this._listar();
   },
 
-  async _buscar(q) {
-    const cont = document.getElementById('prec-notas-resultados');
-    const texto = q.trim().toLowerCase();
-    if (texto.length < 2) { cont.innerHTML = ''; return; }
+  _filtrar(campo, value) {
+    if (campo === 'q')        this._filtroQ        = value;
+    if (campo === 'anio')     this._filtroAnio     = value;
+    if (campo === 'division') this._filtroDivision = value;
+    this._listar();
+  },
 
+  async _alumnosFiltradosDB() {
     const session = Auth.session();
-    const { data } = await sb.from('students').select('*')
-      .eq('institution_id', session.inst)
-      .or(`dni.ilike.%${texto}%,full_name.ilike.%${texto}%`)
-      .limit(10);
+    let query = sb.from('students').select('id, full_name, first_name, last_name, dni, anio, division')
+      .eq('institution_id', session.inst);
+    if (this._filtroAnio)     query = query.eq('anio', parseInt(this._filtroAnio));
+    if (this._filtroDivision) query = query.eq('division', this._filtroDivision);
+    if (this._filtroQ.trim().length >= 2) {
+      const t = this._filtroQ.trim();
+      query = query.or(`dni.ilike.%${t}%,full_name.ilike.%${t}%`);
+    }
+    const { data } = await query;
+    return data || [];
+  },
 
-    const resultados = data || [];
+  async _listar() {
+    const cont = document.getElementById('prec-notas-resultados');
+    if (!this._filtroAnio && !this._filtroDivision && this._filtroQ.trim().length < 2) {
+      cont.innerHTML = '<div style="color:var(--text-3);font-size:.85rem;padding:16px 0">Elegí un año y/o división, o buscá un alumno por nombre/DNI.</div>';
+      return;
+    }
+
+    cont.innerHTML = '<div class="loading">Cargando…</div>';
+    const resultados = (await this._alumnosFiltradosDB())
+      .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
+
     cont.innerHTML = resultados.length
-      ? resultados.map(a => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div style="font-size:.85rem;color:var(--text-1)">${Utils.nombrePlanilla(a)} <span style="color:var(--text-3)">· DNI ${a.dni}</span></div>
-            <button class="btn btn-primary btn-sm" onclick="PreceptorNotas.verAlumno('${a.id}')">Ver</button>
-          </div>`).join('')
+      ? `<div class="table-wrap">
+          <table>
+            <thead><tr><th>Alumno</th><th>DNI</th><th>Curso</th><th></th></tr></thead>
+            <tbody>${resultados.map(a => `
+              <tr>
+                <td class="text-main">${Utils.nombrePlanilla(a)}</td>
+                <td>${a.dni}</td>
+                <td>${a.anio ? a.anio + '°' : '—'}${a.division ? ' ' + a.division : ''}</td>
+                <td><button class="btn btn-primary btn-sm" onclick="PreceptorNotas.verAlumno('${a.id}')">Ver notas</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
       : '<div style="color:var(--text-3);font-size:.85rem;padding:8px 0">Sin resultados.</div>';
   },
 
@@ -48,7 +101,7 @@ const PreceptorNotas = {
     document.getElementById('nav-notas').classList.add('active');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-notas').classList.add('active');
-    document.getElementById('topbar-title').textContent = 'Notas';
+    document.getElementById('topbar-title').textContent = 'Calificaciones';
 
     const { data: alumno } = await sb.from('students').select('*').eq('id', studentId).single();
     if (!alumno) { Utils.toast('No se encontró el alumno', 'error'); return; }
@@ -63,7 +116,7 @@ const PreceptorNotas = {
 
   async _renderAlumno() {
     const el = document.getElementById('notas-content');
-    el.innerHTML = `<div class="page-header"><h3>Notas</h3></div><div class="loading">Cargando…</div>`;
+    el.innerHTML = `<div class="page-header"><h3>Calificaciones</h3></div><div class="loading">Cargando…</div>`;
     const a = this._alumnoActual;
 
     const { data: resultados } = await sb
@@ -92,7 +145,7 @@ const PreceptorNotas = {
     }).join('');
 
     el.innerHTML = `
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="PreceptorNotas.volverBuscador()">← Buscar otro alumno</button>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="PreceptorNotas.volverBuscador()">← Volver</button>
       <div class="page-header">
         <h3>${Utils.nombrePlanilla(a)}</h3>
         <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarAlumno()">⬇ Descargar (CSV)</button>
@@ -120,14 +173,15 @@ const PreceptorNotas = {
     Utils.descargarCsv(`notas_${a.dni}.csv`, ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
+  // ── Exportaciones masivas (respetan los filtros de año/división/búsqueda) ──
+
   async descargarTodo() {
-    const session = Auth.session();
-    const { data: alumnos } = await sb.from('students').select('id, full_name, first_name, last_name, dni').eq('institution_id', session.inst);
-    const alumnoIds = (alumnos || []).map(a => a.id);
-    if (!alumnoIds.length) { Utils.toast('No hay alumnos cargados', 'error'); return; }
+    const alumnos = await this._alumnosFiltradosDB();
+    if (!alumnos.length) { Utils.toast('No hay alumnos para este filtro', 'error'); return; }
 
     const alumnoPorId = {};
     alumnos.forEach(a => { alumnoPorId[a.id] = a; });
+    const alumnoIds = alumnos.map(a => a.id);
 
     const { data: resultados } = await sb
       .from('exam_results')
@@ -135,16 +189,111 @@ const PreceptorNotas = {
       .in('student_id', alumnoIds)
       .neq('status', 'in_progress');
 
-    if (!resultados?.length) { Utils.toast('No hay notas cargadas todavía', 'error'); return; }
+    if (!resultados?.length) { Utils.toast('No hay notas cargadas para este filtro', 'error'); return; }
 
     const filas = resultados.map(r => {
       const a = alumnoPorId[r.student_id];
       const finalScore = r.professor_score ?? r.score;
       const grade = Math.round(finalScore / 10 * 10) / 10;
-      return [Utils.nombrePlanilla(a), a?.dni || '', r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
+      const curso = a?.anio ? `${a.anio}°${a.division ? ' ' + a.division : ''}` : '';
+      return [Utils.nombrePlanilla(a), a?.dni || '', curso, r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
     });
 
-    Utils.descargarCsv('notas_institucion.csv', ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
+    Utils.descargarCsv('calificaciones.csv', ['Alumno', 'DNI', 'Curso', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
+  _numeroALetras(n) {
+    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
+    const entero  = Math.floor(n);
+    const decimal = Math.round((n - entero) * 10);
+    const base = PALABRAS[entero] ?? String(entero);
+    if (!decimal) return base;
+    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
+  },
+
+  async descargarActaPDF() {
+    const alumnos = await this._alumnosFiltradosDB();
+    if (!alumnos.length) { Utils.toast('No hay alumnos para este filtro', 'error'); return; }
+
+    const alumnoPorId = {};
+    alumnos.forEach(a => { alumnoPorId[a.id] = a; });
+    const alumnoIds = alumnos.map(a => a.id);
+
+    const { data: resultados } = await sb
+      .from('exam_results')
+      .select('*, exams(title, subjects(name))')
+      .in('student_id', alumnoIds)
+      .eq('status', 'confirmed');
+
+    if (!resultados?.length) { Utils.toast('No hay notas confirmadas todavía para este filtro', 'error'); return; }
+
+    const session = Auth.session();
+    const { data: inst } = await sb.from('institutions').select('name').eq('id', session.inst).single();
+
+    const porMateria = {};
+    resultados.forEach(r => {
+      const materia = r.exams?.subjects?.name || 'Sin materia';
+      (porMateria[materia] = porMateria[materia] || []).push(r);
+    });
+
+    const filtroTxt = [
+      this._filtroAnio ? `${this._filtroAnio}° año` : null,
+      this._filtroDivision ? `División ${this._filtroDivision}` : null,
+    ].filter(Boolean).join(' · ') || 'Todos los años y divisiones';
+
+    const seccionesHtml = Object.entries(porMateria).sort(([a], [b]) => a.localeCompare(b)).map(([materia, filas]) => {
+      const ordenadas = [...filas].sort((a, b) =>
+        Utils.nombrePlanilla(alumnoPorId[a.student_id]).localeCompare(Utils.nombrePlanilla(alumnoPorId[b.student_id])));
+
+      const rowsHtml = ordenadas.map((r, i) => {
+        const finalScore = r.professor_score ?? r.score;
+        const grade = Math.round(finalScore / 10 * 10) / 10;
+        const a = alumnoPorId[r.student_id];
+        return `<tr>
+          <td>${i + 1}</td>
+          <td>${Utils.nombrePlanilla(a)}</td>
+          <td>${a?.dni || ''}</td>
+          <td>${r.exams?.title || ''}</td>
+          <td style="text-align:center">${grade}</td>
+          <td>${this._numeroALetras(grade)}</td>
+        </tr>`;
+      }).join('');
+
+      return `
+        <h3 style="margin:22px 0 6px;font-size:.95rem">${materia}</h3>
+        <table>
+          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Examen</th><th>Nota</th><th>Nota en letras</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>`;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><title>Calificaciones — ${inst?.name || 'Institución'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 36px; color: #111; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h1 { font-size: 1.15rem; margin-bottom: 2px; }
+        .header p { font-size: .85rem; color: #444; margin: 1px 0; }
+        .meta { text-align: center; font-size: .85rem; margin: 14px 0 6px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        th, td { border: 1px solid #999; padding: 5px 8px; font-size: .8rem; text-align: left; }
+        th { background: #eee; }
+        .firmas { display: flex; justify-content: center; margin-top: 70px; }
+        .firma { width: 260px; text-align: center; font-size: .82rem; }
+        .firma .linea { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; }
+      </style></head><body>
+        <div class="header">
+          <h1>${inst?.name || 'Institución'}</h1>
+          <p>Informe de calificaciones</p>
+        </div>
+        <div class="meta">${filtroTxt} · Emitido: ${Utils.formatDate(Utils.hoyLocal())}</div>
+        ${seccionesHtml}
+        <div class="firmas">
+          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Preceptoría</div>
+        </div>
+      </body></html>`);
+    win.document.close();
+    win.print();
+  },
 };

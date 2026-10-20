@@ -19,7 +19,7 @@ const PreceptorDashboard = {
       return;
     }
 
-    const { data: alumnos } = await sb.from('students').select('id, anio, division').eq('institution_id', session.inst);
+    const { data: alumnos } = await sb.from('students').select('id, full_name, first_name, last_name, dni, anio, division').eq('institution_id', session.inst);
     this._alumnos = alumnos || [];
     const alumnoPorId = {};
     this._alumnos.forEach(a => { alumnoPorId[a.id] = a; });
@@ -292,6 +292,10 @@ const PreceptorDashboard = {
     const porDivision       = this._agruparAlumnos(alumnos, a => a.division || 'Sin división');
     const porAnioDivision  = this._agruparAlumnos(alumnos, a => `${a.anio ? a.anio + '°' : 'Sin año'}${a.division ? ' ' + a.division : ''}`);
 
+    const conError = alumnos
+      .filter(a => !a.anio || !a.division)
+      .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
+
     el.innerHTML = `
       <div class="page-header"><h3>Dashboard</h3></div>
       ${this._vistaMenu()}
@@ -314,7 +318,38 @@ const PreceptorDashboard = {
           ${this._grupoCardCount('Por año y división', porAnioDivision)}
         </div>` : `
         <div class="empty-state"><div class="icon">👥</div><p>No hay alumnos para este filtro.</p></div>`}
+
+      ${this._listaConError(conError)}
     `;
+  },
+
+  _listaConError(conError) {
+    if (!conError.length) return '';
+    const rows = conError.map(a => {
+      const motivo = !a.anio && !a.division
+        ? 'Sin año ni división'
+        : !a.anio ? 'Sin año' : 'Sin división';
+      return `
+        <tr>
+          <td class="text-main">${Utils.nombrePlanilla(a)}</td>
+          <td>${a.dni || '—'}</td>
+          <td><span style="color:var(--warning);font-weight:600">⚠ ${motivo}</span></td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:16px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:14px">
+          Alumnos con datos incompletos (${conError.length})
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Alumno</th><th>DNI</th><th>Falta</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-top:10px">Completalos desde el panel de Admin → Alumnos.</div>
+      </div>`;
   },
 
   _render() {
