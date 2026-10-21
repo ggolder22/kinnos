@@ -1,5 +1,6 @@
 const PreceptorDashboard = {
   _alumnos: [],
+  _subjects: [], // [{ id, name, year, division, despliegue }] — todas las materias de la institución
   _enriched: [], // [{ status, materia, anio, division, fecha, studentId }]
   _filtroAnio: '',
   _filtroDivision: '',
@@ -44,9 +45,10 @@ const PreceptorDashboard = {
     const careerIds = (carreras || []).map(c => c.id);
     let materias = [];
     if (careerIds.length) {
-      const { data } = await sb.from('subjects').select('id, name, despliegue').in('career_id', careerIds);
+      const { data } = await sb.from('subjects').select('id, name, year, division, despliegue').in('career_id', careerIds);
       materias = data || [];
     }
+    this._subjects = materias;
     const materiaPorId = {};
     materias.forEach(m => { materiaPorId[m.id] = m; });
     const subjectIds = materias.map(m => m.id);
@@ -262,6 +264,42 @@ const PreceptorDashboard = {
       </div>`;
   },
 
+  // Variante para "Por materia": la app recién arranca (modo prueba hasta diciembre),
+  // así que una materia sin registros todavía se muestra en 0% — no se oculta ni dice
+  // "sin datos", para tener el panorama completo de entrada desde el día uno.
+  _meterRowMateria(label, pct, total) {
+    const pctReal = total === 0 ? 0 : pct;
+    const nivel = pctReal === null ? null : this._nivel(pctReal);
+    const color = this._colorNivel(nivel);
+    const trackBg = this._trackNivel(nivel);
+    const width = pctReal === null ? 0 : pctReal;
+
+    let estadoTxt;
+    if (total === 0) estadoTxt = `<span style="color:${color};font-weight:700">${this._iconoNivel(nivel)} 0%</span>`;
+    else if (pct === null) estadoTxt = '<span style="color:var(--text-3)">Todo justificado</span>';
+    else estadoTxt = `<span style="color:${color};font-weight:700">${this._iconoNivel(nivel)} ${pct}%</span>`;
+
+    return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:.82rem;color:var(--text-1)">${label}</span>
+          <span style="font-size:.78rem">${estadoTxt}</span>
+        </div>
+        <div style="height:8px;border-radius:999px;background:${trackBg}">
+          <div style="height:100%;width:${width}%;border-radius:999px;background:${color};transition:width .4s"></div>
+        </div>
+      </div>`;
+  },
+
+  _grupoCardMateria(titulo, grupos) {
+    if (!grupos.length) return '';
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:14px">${titulo}</div>
+        ${grupos.map(g => this._meterRowMateria(g.label, g.pct, g.total)).join('')}
+      </div>`;
+  },
+
   _agrupar(enriched, keyFn) {
     const grupos = {};
     enriched.forEach(e => { (grupos[keyFn(e)] = grupos[keyFn(e)] || []).push(e); });
@@ -420,7 +458,7 @@ const PreceptorDashboard = {
     return `
       <div style="margin-top:24px">
         <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warning);margin-bottom:4px">
-          Casos para resolver (${this._pendientes.length})
+          ⏳ Chequear con el preceptor (${this._pendientes.length})
         </div>
         <div style="font-size:.76rem;color:var(--text-3)">No se cuentan en los cálculos de asistencia hasta que se decida qué hacer.</div>
         ${cards}
@@ -447,12 +485,29 @@ const PreceptorDashboard = {
       </div>`;
   },
 
-  _porMateriaPorAnio(enrichedPeriodo) {
-    const anios = [...new Set(enrichedPeriodo.map(e => e.anio))].sort();
+  // Materias que corresponden a los filtros de año/división y al período elegido,
+  // tengan o no asistencia registrada todavía (la app recién entra en vigencia).
+  _subjectsFiltrados(periodo) {
+    return this._subjects.filter(s => {
+      if (this._filtroAnio && String(s.year || '') !== this._filtroAnio) return false;
+      if (this._filtroDivision && s.division && s.division !== this._filtroDivision) return false;
+      return this._coincidePeriodo({ despliegue: s.despliegue }, periodo);
+    });
+  },
+
+  _porMateriaPorAnio(periodo) {
+    const subjects = this._subjectsFiltrados(periodo);
+    const enrichedFiltrado = this._enrichedFiltrado();
+    const anios = [...new Set(subjects.map(s => s.year))].sort((a, b) => (a || 0) - (b || 0));
+
     return anios.map(anio => {
-      const deEsteAnio = enrichedPeriodo.filter(e => e.anio === anio);
-      const porMateria = this._agrupar(deEsteAnio, e => e.materia);
-      return { anio, grupos: porMateria };
+      const deEsteAnio = subjects.filter(s => s.year === anio);
+      const grupos = deEsteAnio.map(s => {
+        const recs = enrichedFiltrado.filter(e => e.materiaId === s.id);
+        const { pct, total } = Asistencia.calcular(recs);
+        return { label: s.name, pct, total };
+      }).sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1));
+      return { anio: anio ? `${anio}°` : 'Sin año', grupos };
     });
   },
 
@@ -518,8 +573,8 @@ const PreceptorDashboard = {
       .sort((a, b) => a.label.localeCompare(b.label));
 
     // "Por materia" tiene su propio selector de período (independiente del cuatrimestre actual)
-    const enrichedMateria = this._enrichedFiltrado().filter(e => this._coincidePeriodo(e, this._periodoMateria));
-    const porMateriaAnio = this._porMateriaPorAnio(enrichedMateria);
+    // y se arma a partir de TODAS las materias (no solo las que ya tienen registros).
+    const porMateriaAnio = this._porMateriaPorAnio(this._periodoMateria);
 
     el.innerHTML = `
       <div class="page-header"><h3>Dashboard</h3></div>
@@ -554,9 +609,9 @@ const PreceptorDashboard = {
         ${this._periodoMateriaChips()}
         ${porMateriaAnio.length ? `
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
-            ${porMateriaAnio.map(g => this._grupoCard(g.anio, g.grupos)).join('')}
+            ${porMateriaAnio.map(g => this._grupoCardMateria(g.anio, g.grupos)).join('')}
           </div>` : `
-          <div class="empty-state"><div class="icon">📚</div><p>No hay asistencia registrada para este período.</p></div>`}
+          <div class="empty-state"><div class="icon">📚</div><p>No hay materias cargadas para este filtro.</p></div>`}
       </div>
 
       ${this._listaAlumnosRiesgo(porAlumno)}

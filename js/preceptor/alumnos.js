@@ -37,6 +37,40 @@ const PreceptorAlumnos = {
     this._render();
   },
 
+  // Reutiliza la misma lista que el Dashboard (PreceptorDashboard._pendientes) para
+  // que el aviso aparezca también acá, en el listado principal de alumnos.
+  _pendientesBlock() {
+    const pendientes = (typeof PreceptorDashboard !== 'undefined' ? PreceptorDashboard._pendientes : []) || [];
+    if (!pendientes.length) return '';
+    const porId = {};
+    this._todos.forEach(a => { porId[a.id] = a; });
+
+    const cards = pendientes.map(p => {
+      const a = porId[p.studentId];
+      if (!a) return '';
+      return `
+        <div style="background:var(--bg-card);border:1px solid var(--warning);border-radius:10px;padding:14px 16px;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div>
+              <div style="font-weight:600;color:var(--text-1)">${Utils.nombrePlanilla(a)}</div>
+              <div style="font-size:.75rem;color:var(--text-3)">DNI ${a.dni || '—'} · ${a.anio ? a.anio + '°' : '—'}${a.division ? ' ' + a.division : ''}</div>
+            </div>
+            <span style="color:var(--warning);font-weight:600;font-size:.8rem;white-space:nowrap">⏳ Pendiente</span>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-2);margin-top:6px">${p.motivo}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:20px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warning);margin-bottom:4px">
+          ⏳ Chequear con el preceptor (${pendientes.length})
+        </div>
+        <div style="font-size:.76rem;color:var(--text-3)">No se cuentan en los cálculos de asistencia hasta que se decida qué hacer.</div>
+        ${cards}
+      </div>`;
+  },
+
   _render() {
     const el = document.getElementById('alumnos-content');
     const data = this._aplicarFiltros();
@@ -82,6 +116,7 @@ const PreceptorAlumnos = {
 
     el.innerHTML = `
       <div class="page-header"><h3>Alumnos <span style="font-weight:400;font-size:.9rem;color:var(--text-3)">(${this._todos.length})</span></h3></div>
+      ${this._pendientesBlock()}
       ${filterBar}
       <div class="table-wrap">
         <table>
