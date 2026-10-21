@@ -10,7 +10,11 @@ const PreceptorDashboard = {
   // Casos puntuales a resolver con el preceptor — no entran en los cálculos de asistencia
   // hasta que se decida qué hacer. Agregar acá { studentId, motivo } cuando haga falta.
   _pendientes: [
-    { studentId: '24ee0fc2-1221-484e-9fa3-416ba82a80bf', motivo: 'Anotado en "Informática Aplicada" (materia de 1°) siendo alumno de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '24ee0fc2-1221-484e-9fa3-416ba82a80bf', subjectName: 'Informática Aplicada', motivo: 'Anotado en "Informática Aplicada" (materia de 1°) siendo alumno de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '517ee448-4017-4c5a-99ef-b9d23a6da820', subjectName: 'Prácticas Profesionalizantes I', motivo: 'Anotada en "Prácticas Profesionalizantes I" (materia de 1°B) siendo alumna de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: 'cb60bed2-691e-4154-9df9-e6b5137a5060', subjectName: 'Prácticas Profesionalizantes I', motivo: 'Anotado en "Prácticas Profesionalizantes I" (materia de 1°B) siendo alumno de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '7f89c65e-5cee-4ecb-902a-91dbaee15fb1', subjectName: 'Práctica Profesionalizante II', motivo: 'Anotada en "Práctica Profesionalizante II" (materia de 2°A) siendo alumna de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '016d524e-52b9-4d93-a042-db4ddde6f359', subjectName: 'Práctica Profesionalizante II', motivo: 'Anotado en "Práctica Profesionalizante II" (materia de 2°A) siendo alumno de 1°B. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
   ],
 
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
@@ -62,13 +66,16 @@ const PreceptorDashboard = {
       registros = data || [];
     }
 
-    const idsPendientes = new Set(this._pendientes.map(p => p.studentId));
+    // Set de "studentId|nombreMateria" a excluir — solo esa combinación puntual,
+    // no todo el historial del alumno (puede tener asistencia real en sus propias materias).
+    const pendientesSet = new Set(this._pendientes.map(p => `${p.studentId}|${p.subjectName}`));
 
     this._enriched = registros.map(r => {
       const s = sesionPorId[r.session_id];
       const a = alumnoPorId[r.student_id];
       if (!s || !a) return null;
-      if (idsPendientes.has(r.student_id)) return null; // caso puntual sin resolver — no computa
+      const nombreMateria = materiaPorId[s.subject_id]?.name;
+      if (pendientesSet.has(`${r.student_id}|${nombreMateria}`)) return null; // caso puntual sin resolver — no computa
       return {
         status: r.status,
         studentId: r.student_id,
