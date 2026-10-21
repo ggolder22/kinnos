@@ -4,12 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Registro de Profesor</title>
+  <script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('kinnos_theme')||'dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="../css/theme-vars.css">
   <style>
-    :root {
-      --bg-base: #0f172a; --bg-card: #1e293b; --border: #334155;
-      --text-1: #f8fafc; --text-2: #94a3b8; --text-3: #64748b;
-      --accent: #6366f1; --accent-h: #4f46e5;
-    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh;
@@ -46,7 +43,7 @@
     .form-group input:focus,
     .form-group select:focus { border-color: var(--accent); }
     .form-group select option { background: var(--bg-card); }
-    .form-group input::placeholder { color: #475569; }
+    .form-group input::placeholder { color: var(--text-3); }
 
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
@@ -59,12 +56,12 @@
     }
     button:hover:not(:disabled) { background: var(--accent-h); }
     button:active { transform: scale(0.98); }
-    button:disabled { background: #334155; cursor: not-allowed; }
+    button:disabled { background: var(--border); cursor: not-allowed; }
 
     .error {
       margin-top: 16px; padding: 12px 16px;
       border-radius: 8px; font-size: 0.875rem; display: none;
-      background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5;
+      background: rgba(239,68,68,.12); border: 1px solid var(--danger); color: var(--danger);
     }
     .back-link {
       display: block; text-align: center; margin-top: 20px;
@@ -74,6 +71,8 @@
   </style>
 </head>
 <body>
+
+<button class="theme-toggle-btn theme-toggle-fixed" onclick="Theme.toggle()" title="Cambiar tema">🌙</button>
 
 <div class="card">
   <div class="logo">
@@ -191,6 +190,7 @@
 
   cargarInstituciones();
 </script>
+<script src="../js/theme.js"></script>
 
 </body>
 </html>

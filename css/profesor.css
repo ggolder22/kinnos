@@ -227,6 +227,6 @@
 .ejerc-tab.active { color: var(--text-1); font-weight: 600; border-bottom-color: var(--accent); }
 
 /* ── Exam badge estado ── */
-.badge-active   { background: rgba(34,197,94,0.15);  color: #86efac; }
-.badge-inactive { background: rgba(100,116,139,0.15); color: #94a3b8; }
-.badge-practice { background: rgba(245,158,11,0.15);  color: #fcd34d; }
+.badge-active   { background: rgba(34,197,94,0.15);  color: var(--success); }
+.badge-inactive { background: rgba(100,116,139,0.15); color: var(--text-2); }
+.badge-practice { background: rgba(245,158,11,0.15);  color: var(--warning); }

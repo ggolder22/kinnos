@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════
+   Variables de color — modo noche (por defecto) y modo día.
+   Toda la app lee estos nombres (var(--bg-base), etc.), así que
+   cambiar de tema es solo cambiar qué bloque aplica.
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  --bg-base:    #0f172a;
+  --bg-card:    #1e293b;
+  --bg-hover:   #273549;
+  --border:     #334155;
+  --text-1:     #f8fafc;
+  --text-2:     #94a3b8;
+  --text-3:     #64748b;
+  --accent:     #6366f1;
+  --accent-h:   #4f46e5;
+  --danger:     #ef4444;
+  --danger-h:   #dc2626;
+  --success:    #22c55e;
+  --warning:    #f59e0b;
+  --sidebar-w:  240px;
+}
+
+:root[data-theme="light"] {
+  --bg-base:    #f1f5f9;
+  --bg-card:    #ffffff;
+  --bg-hover:   #f1f5f9;
+  --border:     #e2e8f0;
+  --text-1:     #0f172a;
+  --text-2:     #475569;
+  --text-3:     #64748b;
+  --accent:     #6366f1;
+  --accent-h:   #4f46e5;
+  --danger:     #dc2626;
+  --danger-h:   #b91c1c;
+  --success:    #16a34a;
+  --warning:    #d97706;
+}
+
+/* ── Botón de modo día/noche (sol/luna) ── */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background .15s, color .15s;
+}
+.theme-toggle-btn:hover { background: var(--border); color: var(--text-1); }
+
+/* Variante para páginas sin topbar (login, horarios públicos, etc.) */
+.theme-toggle-fixed {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+}

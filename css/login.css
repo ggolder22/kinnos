@@ -5,18 +5,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f172a;
+  background: var(--bg-base);
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 .card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 48px 40px;
   width: 100%;
   max-width: 380px;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
 }
 
 .logo {
@@ -27,21 +27,21 @@ body {
 .logo h1 {
   font-size: 2rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-1);
   letter-spacing: -1px;
 }
 
-.logo span { color: #6366f1; }
+.logo span { color: var(--accent); }
 
 .logo p {
-  color: #64748b;
+  color: var(--text-3);
   font-size: 0.875rem;
   margin-top: 4px;
 }
 
 label {
   display: block;
-  color: #94a3b8;
+  color: var(--text-2);
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -52,24 +52,24 @@ label {
 input {
   width: 100%;
   padding: 12px 16px;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  color: #f8fafc;
+  color: var(--text-1);
   font-size: 1.1rem;
   letter-spacing: 2px;
   outline: none;
   transition: border-color 0.2s;
 }
 
-input:focus { border-color: #6366f1; }
-input::placeholder { color: #475569; letter-spacing: 0; }
+input:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text-3); letter-spacing: 0; }
 
 button {
   width: 100%;
   margin-top: 24px;
   padding: 13px;
-  background: #6366f1;
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -79,17 +79,17 @@ button {
   transition: background 0.2s, transform 0.1s;
 }
 
-button:hover  { background: #4f46e5; }
+button:hover  { background: var(--accent-h); }
 button:active { transform: scale(0.98); }
-button:disabled { background: #334155; cursor: not-allowed; }
+button:disabled { background: var(--border); cursor: not-allowed; }
 
 .error {
   margin-top: 16px;
   padding: 12px 16px;
-  background: #450a0a;
-  border: 1px solid #7f1d1d;
+  background: rgba(239,68,68,.12);
+  border: 1px solid var(--danger);
   border-radius: 8px;
-  color: #fca5a5;
+  color: var(--danger);
   font-size: 0.875rem;
   display: none;
 }

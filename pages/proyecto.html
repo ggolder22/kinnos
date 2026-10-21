@@ -4,52 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Seguimiento de Proyecto</title>
+  <script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('kinnos_theme')||'dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="../css/theme-vars.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh;
-      background: #0f172a;
+      background: var(--bg-base);
       font-family: 'Segoe UI', system-ui, sans-serif;
       padding: 32px 20px;
-      color: #f8fafc;
+      color: var(--text-1);
     }
     .wrap { max-width: 720px; margin: 0 auto; }
-    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 14px; }
     .top-bar h1 { font-size: 1.3rem; letter-spacing: -.5px; }
-    .top-bar h1 span { color: #6366f1; }
-    .top-bar a { color: #94a3b8; font-size: .85rem; text-decoration: none; border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; }
-    .top-bar a:hover { color: #f8fafc; border-color: #6366f1; }
+    .top-bar h1 span { color: var(--accent); }
+    .top-bar-right { display: flex; align-items: center; gap: 10px; }
+    .top-bar a { color: var(--text-2); font-size: .85rem; text-decoration: none; border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; }
+    .top-bar a:hover { color: var(--text-1); border-color: var(--accent); }
 
     .buscar { display: flex; gap: 8px; margin-bottom: 28px; }
     .buscar input {
-      flex: 1; padding: 12px 14px; background: #1e293b; border: 1px solid #334155;
-      border-radius: 8px; color: #f8fafc; font-size: .95rem; letter-spacing: 1px; text-transform: uppercase;
+      flex: 1; padding: 12px 14px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-1); font-size: .95rem; letter-spacing: 1px; text-transform: uppercase;
     }
     .buscar button {
-      padding: 12px 20px; background: #6366f1; border: none; border-radius: 8px;
+      padding: 12px 20px; background: var(--accent); border: none; border-radius: 8px;
       color: #fff; font-weight: 600; cursor: pointer;
     }
-    .buscar button:hover { background: #4f46e5; }
+    .buscar button:hover { background: var(--accent-h); }
 
-    .loading, .error-msg { text-align: center; color: #94a3b8; padding: 40px 20px; }
-    .error-msg { color: #fca5a5; }
+    .loading, .error-msg { text-align: center; color: var(--text-2); padding: 40px 20px; }
+    .error-msg { color: var(--danger); }
 
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px 22px; margin-bottom: 16px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-bottom: 16px; }
     .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: .72rem; font-weight: 600; }
-    .badge-progress { background: rgba(99,102,241,.15); color: #a5b4fc; }
-    .badge-approved { background: rgba(34,197,94,.15); color: #86efac; }
-    .badge-not-approved { background: rgba(239,68,68,.15); color: #fca5a5; }
+    .badge-progress { background: rgba(99,102,241,.15); color: var(--accent); }
+    .badge-approved { background: rgba(34,197,94,.15); color: var(--success); }
+    .badge-not-approved { background: rgba(239,68,68,.15); color: var(--danger); }
 
-    .update { padding: 12px 14px; border-left: 3px solid #334155; background: #0f172a; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
-    .update.profesor { border-left-color: #6366f1; }
+    .update { padding: 12px 14px; border-left: 3px solid var(--border); background: var(--bg-base); border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+    .update.profesor { border-left-color: var(--accent); }
     .update-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: .82rem; }
     .update-author { font-weight: 600; }
-    .update-date { color: #64748b; font-size: .7rem; }
-    .update-msg { color: #cbd5e1; font-size: .85rem; margin-bottom: 8px; white-space: pre-wrap; }
+    .update-date { color: var(--text-3); font-size: .7rem; }
+    .update-msg { color: var(--text-2); font-size: .85rem; margin-bottom: 8px; white-space: pre-wrap; }
     .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
-    .attachments img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
-    .attachments video { width: 160px; height: 90px; border-radius: 6px; border: 1px solid #334155; }
-    .attachments a.file { color: #a5b4fc; font-size: .8rem; text-decoration: none; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; }
+    .attachments img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+    .attachments video { width: 160px; height: 90px; border-radius: 6px; border: 1px solid var(--border); }
+    .attachments a.file { color: var(--accent); font-size: .8rem; text-decoration: none; border: 1px solid var(--border); padding: 6px 10px; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -57,7 +60,10 @@
 <div class="wrap">
   <div class="top-bar">
     <h1>Kin<span>nos</span> · Seguimiento</h1>
-    <a href="index.html">← Volver al ingreso</a>
+    <div class="top-bar-right">
+      <button class="theme-toggle-btn" onclick="Theme.toggle()" title="Cambiar tema">🌙</button>
+      <a href="index.html">← Volver al ingreso</a>
+    </div>
   </div>
 
   <div class="buscar">
@@ -135,7 +141,7 @@
     return `
       <div class="update ${esProfe ? 'profesor' : ''}">
         <div class="update-head">
-          <span class="update-author" style="color:${esProfe ? '#a5b4fc' : '#f8fafc'}">${esProfe ? '👨‍🏫 ' : ''}${u.author_name}</span>
+          <span class="update-author" style="color:${esProfe ? 'var(--accent)' : 'var(--text-1)'}">${esProfe ? '👨‍🏫 ' : ''}${u.author_name}</span>
           <span class="update-date">${fecha}</span>
         </div>
         ${u.message ? `<div class="update-msg">${u.message}</div>` : ''}
@@ -143,6 +149,7 @@
       </div>`;
   }
 </script>
+<script src="../js/theme.js"></script>
 
 </body>
 </html>

@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Horarios</title>
+  <script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('kinnos_theme')||'dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="../css/theme-vars.css">
   <link rel="stylesheet" href="../css/horarios.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh;
-      background: #0f172a;
+      background: var(--bg-base);
       font-family: 'Segoe UI', system-ui, sans-serif;
       padding: 32px 20px;
     }
@@ -19,26 +21,31 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 14px;
     }
-    .top-bar h1 { color: #f8fafc; font-size: 1.4rem; letter-spacing: -.5px; }
-    .top-bar h1 span { color: #6366f1; }
+    .top-bar h1 { color: var(--text-1); font-size: 1.4rem; letter-spacing: -.5px; }
+    .top-bar h1 span { color: var(--accent); }
+    .top-bar-right { display: flex; align-items: center; gap: 10px; }
     .top-bar a {
-      color: #94a3b8;
+      color: var(--text-2);
       font-size: .85rem;
       text-decoration: none;
-      border: 1px solid #334155;
+      border: 1px solid var(--border);
       padding: 8px 14px;
       border-radius: 8px;
     }
-    .top-bar a:hover { color: #f8fafc; border-color: #6366f1; }
-    .loading { text-align: center; color: #94a3b8; padding: 60px 20px; }
+    .top-bar a:hover { color: var(--text-1); border-color: var(--accent); }
+    .loading { text-align: center; color: var(--text-2); padding: 60px 20px; }
   </style>
 </head>
 <body>
 
 <div class="top-bar">
   <h1>Kin<span>nos</span> · Horarios</h1>
-  <a href="index.html">← Volver al ingreso</a>
+  <div class="top-bar-right">
+    <button class="theme-toggle-btn" onclick="Theme.toggle()" title="Cambiar tema">🌙</button>
+    <a href="index.html">← Volver al ingreso</a>
+  </div>
 </div>
 
 <div class="horario-wrap">
@@ -117,6 +124,7 @@
 
   init();
 </script>
+<script src="../js/theme.js"></script>
 
 </body>
 </html>

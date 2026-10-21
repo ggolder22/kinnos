@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kinnos — Ayuda</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('kinnos_theme')||'dark');}catch(e){}})();</script>
+<link rel="stylesheet" href="../css/theme-vars.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
 <style>
@@ -69,7 +71,10 @@
 
 <div class="top-bar">
   <h1>Kin<span>nos</span> · Centro de ayuda</h1>
-  <a href="index.html" id="volver-link">← Volver al inicio</a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <button class="theme-toggle-btn" onclick="Theme.toggle()" title="Cambiar tema">🌙</button>
+    <a href="index.html" id="volver-link">← Volver al inicio</a>
+  </div>
 </div>
 
 <div class="layout">
@@ -305,6 +310,7 @@ function filtrar(q) {
 
 init();
 </script>
+<script src="../js/theme.js"></script>
 
 </body>
 </html>

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinnos — Alumno</title>
+  <script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('kinnos_theme')||'dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="../css/theme-vars.css">
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/alumno.css">
@@ -54,6 +56,7 @@
         <div id="topbar-sub" class="topbar-sub"></div>
       </div>
       <div class="topbar-right">
+        <button class="theme-toggle-btn" onclick="Theme.toggle()" title="Cambiar tema">🌙</button>
         <a href="ayuda.html?rol=alumno" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Ayuda">❓ Ayuda</a>
         <button class="btn btn-ghost btn-sm legajo-btn" onclick="AlumnoPerfil.abrir()" title="Editar perfil">
           <span id="alumno-greeting"></span>
@@ -287,6 +290,7 @@
 <script src="../js/sb.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/utils.js"></script>
+<script src="../js/theme.js"></script>
 <script src="../js/horarios.js"></script>
 <script src="../js/alumno/horarios.js"></script>
 <script src="../js/alumno/materias.js"></script>
