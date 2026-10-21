@@ -94,6 +94,14 @@
       <label>Dirección</label>
       <input type="text" id="inst-modal-addr" placeholder="Ej: Av. Córdoba 1234, Mendoza">
     </div>
+    <div class="form-group">
+      <label>Cuatrimestre actual</label>
+      <select id="inst-modal-cuatrimestre">
+        <option value="Cuatrimestre 1">Cuatrimestre 1</option>
+        <option value="Cuatrimestre 2">Cuatrimestre 2</option>
+      </select>
+      <small style="color:var(--text-3)">Se usa para filtrar qué materias cuatrimestrales ven los alumnos y para avisos de asistencia.</small>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="AdminInstitutions.closeInstModal()">Cancelar</button>
       <button class="btn btn-primary" id="inst-modal-save" onclick="AdminInstitutions.saveInst()">Guardar</button>

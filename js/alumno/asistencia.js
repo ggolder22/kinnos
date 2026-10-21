@@ -4,6 +4,7 @@ const AlumnoAsistencia = {
   _sesionHoy:     null,
   _miRegistroHoy: null,
   _diaCerrado:    null, // { reason } si hoy la institución no tiene clases
+  _fueraDeCuatrimestre: false, // la materia es cuatrimestral y no es el cuatrimestre actual
 
   async init() {
     const el = document.getElementById('asistencia-content');
@@ -13,6 +14,13 @@ const AlumnoAsistencia = {
 
     const institutionId = AlumnoState.materia?.careers?.institutions?.id || null;
     this._diaCerrado = await Asistencia.diaSinClases(institutionId, hoy);
+
+    const despliegue = AlumnoState.materia?.despliegue;
+    this._fueraDeCuatrimestre = false;
+    if (institutionId && despliegue && despliegue !== 'Anual') {
+      const { data: inst } = await sb.from('institutions').select('cuatrimestre_actual').eq('id', institutionId).single();
+      if (inst?.cuatrimestre_actual && inst.cuatrimestre_actual !== despliegue) this._fueraDeCuatrimestre = true;
+    }
 
     this._horarios = this._diaCerrado ? [] : await Asistencia.cargarHorariosDeMateria(AlumnoState.materia);
     this._ventana = this._diaCerrado ? null : Asistencia.ventanaDeHoy(this._horarios);
@@ -70,9 +78,13 @@ const AlumnoAsistencia = {
       </div>`;
     }
     if (!this._horarios.length) {
-      return `<div class="card" style="margin-bottom:18px">
-        <div style="font-size:.85rem;color:var(--text-3)">Esta materia todavía no tiene horario vinculado en el cronograma — avisale al profesor para que lo pida al administrador.</div>
-      </div>`;
+      return this._fueraDeCuatrimestre
+        ? `<div class="card" style="margin-bottom:18px">
+            <div style="font-size:.85rem;color:var(--text-3)">Esta materia no se dicta en este cuatrimestre.</div>
+          </div>`
+        : `<div class="card" style="margin-bottom:18px">
+            <div style="font-size:.85rem;color:var(--text-3)">Esta materia todavía no tiene horario vinculado en el cronograma — avisale al profesor para que lo pida al administrador.</div>
+          </div>`;
     }
 
     const estado = Asistencia.estadoVentana(this._ventana);

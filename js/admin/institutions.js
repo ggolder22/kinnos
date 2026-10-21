@@ -102,6 +102,7 @@ const AdminInstitutions = {
     document.getElementById('inst-modal-id').value    = item?.id    || '';
     document.getElementById('inst-modal-name').value  = item?.name  || '';
     document.getElementById('inst-modal-addr').value  = item?.address || '';
+    document.getElementById('inst-modal-cuatrimestre').value = item?.cuatrimestre_actual || 'Cuatrimestre 2';
     document.getElementById('inst-modal').classList.remove('hidden');
     document.getElementById('inst-modal-name').focus();
   },
@@ -115,14 +116,15 @@ const AdminInstitutions = {
     const id   = document.getElementById('inst-modal-id').value;
     const name = document.getElementById('inst-modal-name').value.trim();
     const addr = document.getElementById('inst-modal-addr').value.trim();
+    const cuatrimestre_actual = document.getElementById('inst-modal-cuatrimestre').value;
     if (!name) { Utils.toast('El nombre es obligatorio', 'error'); return; }
 
     Utils.btnLoading(btn, true);
     let error;
     if (id) {
-      ({ error } = await sb.from('institutions').update({ name, address: addr }).eq('id', id));
+      ({ error } = await sb.from('institutions').update({ name, address: addr, cuatrimestre_actual }).eq('id', id));
     } else {
-      ({ error } = await sb.from('institutions').insert({ name, address: addr }));
+      ({ error } = await sb.from('institutions').insert({ name, address: addr, cuatrimestre_actual }));
     }
     Utils.btnLoading(btn, false);
 

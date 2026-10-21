@@ -41,7 +41,7 @@ const AlumnoMaterias = {
   async seleccionar(subjectId) {
     const { data: m } = await sb
       .from('subjects')
-      .select('id, name, year, division, join_code, careers(name, institutions(id, name))')
+      .select('id, name, year, division, despliegue, join_code, careers(name, institutions(id, name))')
       .eq('id', subjectId)
       .single();
     if (!m) return;
@@ -94,10 +94,11 @@ const AlumnoMaterias = {
     }
 
     // Materias de esa(s) carrera(s) + inscripciones actuales + mi propio año/división
-    const [{ data: subjects }, { data: enrolled }, { data: yo }] = await Promise.all([
-      sb.from('subjects').select('id, name, year, division, career_id').in('career_id', careerIds).order('year').order('name'),
+    const [{ data: subjects }, { data: enrolled }, { data: yo }, { data: inst }] = await Promise.all([
+      sb.from('subjects').select('id, name, year, division, despliegue, career_id').in('career_id', careerIds).order('year').order('name'),
       sb.from('student_subjects').select('subject_id').eq('student_id', session.id),
       sb.from('students').select('anio, division').eq('id', session.id).single(),
+      instId ? sb.from('institutions').select('cuatrimestre_actual').eq('id', instId).single() : Promise.resolve({ data: null }),
     ]);
 
     if (!subjects?.length) {
@@ -106,12 +107,15 @@ const AlumnoMaterias = {
     }
 
     const enrolledIds = new Set((enrolled || []).map(e => e.subject_id));
+    const cuatrimestreActual = inst?.cuatrimestre_actual || null;
 
     // Si ya elegí mi año/división (en Horarios o al registrarme), no muestro materias que sean
     // exclusivas de la otra división. Si todavía no lo elegí, se ven todas (igual que antes).
-    const misSubjects = (yo?.anio && yo?.division)
-      ? subjects.filter(s => !(s.division && s.year === yo.anio && s.division !== yo.division))
-      : subjects;
+    // Tampoco muestro materias cuatrimestrales que no se dictan en este momento del año
+    // (las anuales y las que todavía no tienen despliegue cargado se ven siempre).
+    const misSubjects = subjects
+      .filter(s => !(yo?.anio && yo?.division) || !(s.division && s.year === yo.anio && s.division !== yo.division))
+      .filter(s => !cuatrimestreActual || !s.despliegue || s.despliegue === 'Anual' || s.despliegue === cuatrimestreActual);
 
     // Agrupar por año dentro de la carrera
     const byYear = {};
