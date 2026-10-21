@@ -4,6 +4,8 @@ const PreceptorDashboard = {
   _filtroAnio: '',
   _filtroDivision: '',
   _vista: 'asistencia', // 'asistencia' | 'alumnos'
+  _cuatrimestreActual: null, // 'Cuatrimestre 1' | 'Cuatrimestre 2', de institutions.cuatrimestre_actual
+  _periodoMateria: '',       // '' (todo el año) | 'Cuatrimestre 1' | 'Cuatrimestre 2' — solo para la sección "Por materia"
 
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
   UMBRAL_OK: 80,
@@ -19,6 +21,10 @@ const PreceptorDashboard = {
       return;
     }
 
+    const { data: inst } = await sb.from('institutions').select('cuatrimestre_actual').eq('id', session.inst).single();
+    this._cuatrimestreActual = inst?.cuatrimestre_actual || null;
+    this._periodoMateria = this._cuatrimestreActual || '';
+
     const { data: alumnos } = await sb.from('students').select('id, full_name, first_name, last_name, dni, anio, division').eq('institution_id', session.inst);
     this._alumnos = alumnos || [];
     const alumnoPorId = {};
@@ -28,7 +34,7 @@ const PreceptorDashboard = {
     const careerIds = (carreras || []).map(c => c.id);
     let materias = [];
     if (careerIds.length) {
-      const { data } = await sb.from('subjects').select('id, name').in('career_id', careerIds);
+      const { data } = await sb.from('subjects').select('id, name, despliegue').in('career_id', careerIds);
       materias = data || [];
     }
     const materiaPorId = {};
@@ -57,7 +63,9 @@ const PreceptorDashboard = {
       return {
         status: r.status,
         studentId: r.student_id,
+        materiaId: s.subject_id,
         materia: materiaPorId[s.subject_id]?.name || '—',
+        despliegue: materiaPorId[s.subject_id]?.despliegue || null, // 'Cuatrimestre 1' | 'Cuatrimestre 2' | 'Anual' | null
         anioNum: a.anio || null,
         anio: a.anio ? `${a.anio}°` : 'Sin año',
         division: a.division || 'Sin división',
@@ -97,6 +105,11 @@ const PreceptorDashboard = {
     this._render();
   },
 
+  cambiarPeriodoMateria(value) {
+    this._periodoMateria = value;
+    this._render();
+  },
+
   _alumnosFiltrados() {
     return this._alumnos.filter(a => {
       if (this._filtroAnio && String(a.anio || '') !== this._filtroAnio) return false;
@@ -111,6 +124,20 @@ const PreceptorDashboard = {
       if (this._filtroDivision && e.division !== this._filtroDivision) return false;
       return true;
     });
+  },
+
+  // Un registro "pertenece" a un cuatrimestre si la materia es anual, no tiene
+  // despliegue cargado (no le ocultamos nada a nadie por un dato faltante), o
+  // coincide con el período pedido.
+  _coincidePeriodo(e, periodo) {
+    if (!periodo) return true; // 'todo el año'
+    return !e.despliegue || e.despliegue === 'Anual' || e.despliegue === periodo;
+  },
+
+  // Registros del cuatrimestre ACTUAL (según institutions.cuatrimestre_actual) — esto
+  // es lo que alimenta el número principal, los stat tiles y las tarjetas de arriba.
+  _enrichedCuatrimestreActual() {
+    return this._enrichedFiltrado().filter(e => this._coincidePeriodo(e, this._cuatrimestreActual));
   },
 
   // ── Color / estado de 3 niveles ───────────────────────────
@@ -357,10 +384,68 @@ const PreceptorDashboard = {
     this._renderAsistencia();
   },
 
+  _periodoMateriaChips() {
+    const chip = (val, label) => `
+      <button onclick="PreceptorDashboard.cambiarPeriodoMateria('${val}')"
+        style="padding:6px 14px;border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;
+          border:1px solid ${this._periodoMateria === val ? 'var(--accent)' : 'var(--border)'};
+          background:${this._periodoMateria === val ? 'var(--accent)' : 'var(--bg-base)'};
+          color:${this._periodoMateria === val ? '#fff' : 'var(--text-2)'}">${label}</button>`;
+    return `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+        ${chip('', 'Todo el año (acumulado)')}
+        ${chip('Cuatrimestre 1', '1er Cuatrimestre')}
+        ${chip('Cuatrimestre 2', '2do Cuatrimestre')}
+      </div>`;
+  },
+
+  _porMateriaPorAnio(enrichedPeriodo) {
+    const anios = [...new Set(enrichedPeriodo.map(e => e.anio))].sort();
+    return anios.map(anio => {
+      const deEsteAnio = enrichedPeriodo.filter(e => e.anio === anio);
+      const porMateria = this._agrupar(deEsteAnio, e => e.materia);
+      return { anio, grupos: porMateria };
+    });
+  },
+
+  _listaAlumnosRiesgo(porAlumno) {
+    const alumnoPorId = {};
+    this._alumnos.forEach(a => { alumnoPorId[a.id] = a; });
+
+    const filas = Object.entries(porAlumno)
+      .map(([studentId, recs]) => ({ alumno: alumnoPorId[studentId], ...Asistencia.calcular(recs) }))
+      .filter(f => f.alumno && f.pct !== null && f.pct < this.UMBRAL_MEDIO)
+      .sort((a, b) => a.pct - b.pct);
+
+    if (!filas.length) return '';
+
+    const rows = filas.map(f => `
+      <tr>
+        <td class="text-main">${Utils.nombrePlanilla(f.alumno)}</td>
+        <td>${f.alumno.dni || '—'}</td>
+        <td>${f.alumno.anio ? f.alumno.anio + '°' : '—'}${f.alumno.division ? ' ' + f.alumno.division : ''}</td>
+        <td style="text-align:center;font-weight:700;color:var(--danger)">${f.pct}%</td>
+        <td style="text-align:center">${f.computadas} / ${f.total}</td>
+      </tr>`).join('');
+
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:24px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--danger);margin-bottom:14px">
+          ⚠ Alumnos en riesgo (${filas.length})
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Alumno</th><th>DNI</th><th>Curso</th><th style="text-align:center">Asistencia</th><th style="text-align:center">Clases</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  },
+
   _renderAsistencia() {
     const el = document.getElementById('dashboard-content');
     const alumnos = this._alumnosFiltrados();
-    const enriched = this._enrichedFiltrado();
+    const enriched = this._enrichedCuatrimestreActual(); // SIEMPRE del cuatrimestre actual (gauge, tiles, resto de tarjetas)
     const global = Asistencia.calcular(enriched);
 
     // Alumnos en riesgo (su propio % < umbral medio), de los que tienen al menos un dato
@@ -372,8 +457,8 @@ const PreceptorDashboard = {
       if (pct !== null && pct < this.UMBRAL_MEDIO) alumnosEnRiesgo++;
     });
 
-    const porMateria  = this._agrupar(enriched, e => e.materia);
-    const materiasEnRiesgo = porMateria.filter(g => g.pct !== null && g.pct < this.UMBRAL_MEDIO).length;
+    const porMateriaGlobal = this._agrupar(enriched, e => e.materia);
+    const materiasEnRiesgo = porMateriaGlobal.filter(g => g.pct !== null && g.pct < this.UMBRAL_MEDIO).length;
 
     const porAnio = this._agrupar(enriched, e => e.anio);
     const porDivision = this._agrupar(enriched, e => e.division);
@@ -384,10 +469,18 @@ const PreceptorDashboard = {
       .map(g => ({ ...g, label: `${nombresMes[parseInt(g.label.slice(5, 7)) - 1]} ${g.label.slice(0, 4)}` }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
+    // "Por materia" tiene su propio selector de período (independiente del cuatrimestre actual)
+    const enrichedMateria = this._enrichedFiltrado().filter(e => this._coincidePeriodo(e, this._periodoMateria));
+    const porMateriaAnio = this._porMateriaPorAnio(enrichedMateria);
+
     el.innerHTML = `
       <div class="page-header"><h3>Dashboard</h3></div>
       ${this._vistaMenu()}
       ${this._chips()}
+
+      <div style="font-size:.76rem;color:var(--text-3);margin:-12px 0 18px">
+        Mostrando: <strong style="color:var(--text-2)">${this._cuatrimestreActual || 'todo el año'} (actual)</strong>
+      </div>
 
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-bottom:28px">
         <div style="flex-shrink:0">${this._gaugeSvg(global.pct)}</div>
@@ -401,13 +494,24 @@ const PreceptorDashboard = {
 
       ${enriched.length ? `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
-          ${this._grupoCard('Por materia', porMateria)}
           ${this._grupoCard('Por año', porAnio)}
           ${this._grupoCard('Por división', porDivision)}
           ${this._grupoCard('Por día de la semana', porDia)}
           ${this._grupoCard('Por mes', porMes)}
         </div>` : `
         <div class="empty-state"><div class="icon">📊</div><p>No hay asistencia registrada todavía para este filtro.</p></div>`}
+
+      <div style="margin-top:28px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px">Por materia</div>
+        ${this._periodoMateriaChips()}
+        ${porMateriaAnio.length ? `
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+            ${porMateriaAnio.map(g => this._grupoCard(g.anio, g.grupos)).join('')}
+          </div>` : `
+          <div class="empty-state"><div class="icon">📚</div><p>No hay asistencia registrada para este período.</p></div>`}
+      </div>
+
+      ${this._listaAlumnosRiesgo(porAlumno)}
     `;
   },
 };
