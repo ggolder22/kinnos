@@ -7,6 +7,12 @@ const PreceptorDashboard = {
   _cuatrimestreActual: null, // 'Cuatrimestre 1' | 'Cuatrimestre 2', de institutions.cuatrimestre_actual
   _periodoMateria: '',       // '' (todo el año) | 'Cuatrimestre 1' | 'Cuatrimestre 2' — solo para la sección "Por materia"
 
+  // Casos puntuales a resolver con el preceptor — no entran en los cálculos de asistencia
+  // hasta que se decida qué hacer. Agregar acá { studentId, motivo } cuando haga falta.
+  _pendientes: [
+    { studentId: '24ee0fc2-1221-484e-9fa3-416ba82a80bf', motivo: 'Anotado en "Informática Aplicada" (materia de 1°) siendo alumno de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+  ],
+
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
   UMBRAL_OK: 80,
   UMBRAL_MEDIO: 70,
@@ -56,10 +62,13 @@ const PreceptorDashboard = {
       registros = data || [];
     }
 
+    const idsPendientes = new Set(this._pendientes.map(p => p.studentId));
+
     this._enriched = registros.map(r => {
       const s = sesionPorId[r.session_id];
       const a = alumnoPorId[r.student_id];
       if (!s || !a) return null;
+      if (idsPendientes.has(r.student_id)) return null; // caso puntual sin resolver — no computa
       return {
         status: r.status,
         studentId: r.student_id,
@@ -347,6 +356,7 @@ const PreceptorDashboard = {
         <div class="empty-state"><div class="icon">👥</div><p>No hay alumnos para este filtro.</p></div>`}
 
       ${this._listaConError(conError)}
+      ${this._listaPendientes()}
     `;
   },
 
@@ -376,6 +386,37 @@ const PreceptorDashboard = {
           </table>
         </div>
         <div style="font-size:.76rem;color:var(--text-3);margin-top:10px">Completalos desde el panel de Admin → Alumnos.</div>
+      </div>`;
+  },
+
+  _listaPendientes() {
+    if (!this._pendientes.length) return '';
+    const alumnoPorId = {};
+    this._alumnos.forEach(a => { alumnoPorId[a.id] = a; });
+
+    const cards = this._pendientes.map(p => {
+      const a = alumnoPorId[p.studentId];
+      if (!a) return '';
+      return `
+        <div style="background:var(--bg-card);border:1px solid var(--warning);border-radius:12px;padding:16px;margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div>
+              <div style="font-weight:600;color:var(--text-1)">${Utils.nombrePlanilla(a)}</div>
+              <div style="font-size:.75rem;color:var(--text-3)">DNI ${a.dni || '—'} · ${a.anio ? a.anio + '°' : '—'}${a.division ? ' ' + a.division : ''}</div>
+            </div>
+            <span style="color:var(--warning);font-weight:600;font-size:.8rem;white-space:nowrap">⏳ Pendiente</span>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-2);margin-top:8px">${p.motivo}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="margin-top:24px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warning);margin-bottom:4px">
+          Casos para resolver (${this._pendientes.length})
+        </div>
+        <div style="font-size:.76rem;color:var(--text-3)">No se cuentan en los cálculos de asistencia hasta que se decida qué hacer.</div>
+        ${cards}
       </div>`;
   },
 
