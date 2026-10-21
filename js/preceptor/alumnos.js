@@ -71,6 +71,39 @@ const PreceptorAlumnos = {
       </div>`;
   },
 
+  _listaConError() {
+    const conError = this._todos
+      .filter(a => !a.anio || !a.division)
+      .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
+    if (!conError.length) return '';
+
+    const rows = conError.map(a => {
+      const motivo = !a.anio && !a.division
+        ? 'Sin año ni división'
+        : !a.anio ? 'Sin año' : 'Sin división';
+      return `
+        <tr>
+          <td class="text-main">${Utils.nombrePlanilla(a)}</td>
+          <td>${a.dni || '—'}</td>
+          <td><span style="color:var(--warning);font-weight:600">⚠ ${motivo}</span></td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px">
+          Alumnos con datos incompletos (${conError.length})
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Alumno</th><th>DNI</th><th>Falta</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-top:10px">Completalos desde el panel de Admin → Alumnos, o editalos acá si tenés el dato a mano.</div>
+      </div>`;
+  },
+
   _render() {
     const el = document.getElementById('alumnos-content');
     const data = this._aplicarFiltros();
@@ -117,6 +150,7 @@ const PreceptorAlumnos = {
     el.innerHTML = `
       <div class="page-header"><h3>Alumnos <span style="font-weight:400;font-size:.9rem;color:var(--text-3)">(${this._todos.length})</span></h3></div>
       ${this._pendientesBlock()}
+      ${this._listaConError()}
       ${filterBar}
       <div class="table-wrap">
         <table>
