@@ -498,16 +498,18 @@ const PreceptorDashboard = {
   _porMateriaPorAnio(periodo) {
     const subjects = this._subjectsFiltrados(periodo);
     const enrichedFiltrado = this._enrichedFiltrado();
-    const anios = [...new Set(subjects.map(s => s.year))].sort((a, b) => (a || 0) - (b || 0));
+    // Una columna por curso (1°A, 1°B, 2°A…): cada materia es de un solo curso
+    const curso = s => `${s.year ? s.year + '°' : 'Sin año'}${s.division ? s.division : ''}`;
+    const cursos = [...new Set(subjects.map(curso))].sort();
 
-    return anios.map(anio => {
-      const deEsteAnio = subjects.filter(s => s.year === anio);
-      const grupos = deEsteAnio.map(s => {
+    return cursos.map(c => {
+      const deEsteCurso = subjects.filter(s => curso(s) === c);
+      const grupos = deEsteCurso.map(s => {
         const recs = enrichedFiltrado.filter(e => e.materiaId === s.id);
         const { pct, total } = Asistencia.calcular(recs);
         return { label: s.name, pct, total };
       }).sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1));
-      return { anio: anio ? `${anio}°` : 'Sin año', grupos };
+      return { anio: c, grupos };
     });
   },
 
