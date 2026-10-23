@@ -16,6 +16,10 @@ const PreceptorDashboard = {
     { studentId: 'cb60bed2-691e-4154-9df9-e6b5137a5060', subjectName: 'Prácticas Profesionalizantes I', motivo: 'Anotado en "Prácticas Profesionalizantes I" (materia de 1°B) siendo alumno de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
     { studentId: '016d524e-52b9-4d93-a042-db4ddde6f359', subjectName: 'Práctica Profesionalizante II', motivo: 'Anotado en "Práctica Profesionalizante II" (materia de 2°A) siendo alumno de 1°B. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
     { studentId: '77288779-7943-4e04-baa5-fd40ff03e92b', subjectName: null, motivo: '⚠ Error en las listas oficiales: figura a la vez en la lista de 1°A y en la de 1°B. Se le dejó el curso vacío hasta confirmar cuál es — después cargarlo en Admin → Alumnos.' },
+    { studentId: '5b9fde30-7a56-459b-acb0-07afa1deafd4', subjectName: 'Gestión de Proyectos', motivo: 'Anotada en "Gestión de Proyectos" (materia de 3°A) siendo alumna de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '5b9fde30-7a56-459b-acb0-07afa1deafd4', subjectName: 'Práctica Profesionalizante V', motivo: 'Anotada en "Práctica Profesionalizante V" (materia de 3°A) siendo alumna de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '6ca08d43-a4db-4053-af16-58f7ed8d2e61', subjectName: 'Práctica Profesionalizante V', motivo: 'Anotado en "Práctica Profesionalizante V" (materia de 3°A) siendo alumno de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '4d8aa97d-ea98-46c3-9221-cf7eb75b096b', subjectName: 'Electrotecnia', motivo: 'Anotado en "Electrotecnia" (materia de 1°A) siendo alumno de 3°, sin división cargada. Definir si adeuda la materia (recursante) o es un error de inscripción — y de paso completarle la división.' },
   ],
 
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)
