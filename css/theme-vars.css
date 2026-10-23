@@ -63,3 +63,12 @@
   right: 16px;
   z-index: 100;
 }
+
+/* ── Crédito del desarrollador ── */
+.kinnos-credit {
+  text-align: center;
+  font-size: .68rem;
+  color: var(--text-3);
+  opacity: .8;
+  padding: 10px 0 2px;
+}
