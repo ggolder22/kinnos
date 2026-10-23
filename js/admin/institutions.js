@@ -253,7 +253,7 @@ const AdminInstitutions = {
       <tr>
         <td class="text-main">${m.name}</td>
         <td>${m.year ? `${m.year}°` : '—'}</td>
-        <td>${m.division ? `<span class="badge badge-indigo">${m.division}</span>` : 'Ambas'}</td>
+        <td>${m.division ? `<span class="badge badge-indigo">${m.division}</span>` : '<span style="color:var(--danger)">⚠ Sin división</span>'}</td>
         <td>${m.despliegue || '—'}</td>
         <td>${m.campo_formacion
               ? `<span class="badge ${this._badgeCampo(m.campo_formacion)}">${m.campo_formacion}</span>`
@@ -321,6 +321,7 @@ const AdminInstitutions = {
     const hs_semana = parseInt(document.getElementById('materia-modal-hs-semana').value) || null;
     const hs_total  = parseInt(document.getElementById('materia-modal-hs-total').value)  || null;
     if (!name) { Utils.toast('El nombre es obligatorio', 'error'); return; }
+    if (!division) { Utils.toast('Elegí la división (A o B)', 'error'); return; }
 
     Utils.btnLoading(btn, true);
     const payload = { name, year, despliegue, division, campo_formacion, hs_semana, hs_total };
@@ -372,8 +373,11 @@ const AdminInstitutions = {
     const { data: vinculados } = await sb.from('schedules').select('*')
       .eq('subject_id', m.id).order('day').order('time_start');
 
-    const { data: candidatos } = await sb.from('schedules').select('*')
+    // Solo bloques de la misma división: nunca se vincula un horario de 1°A a una materia de 1°B
+    let qCand = sb.from('schedules').select('*')
       .is('subject_id', null).eq('anio', m.year || 0).order('day').order('time_start');
+    if (m.division) qCand = qCand.eq('division', m.division);
+    const { data: candidatos } = await qCand;
 
     const vinculadosHtml = (vinculados || []).length
       ? vinculados.map(h => `
@@ -382,7 +386,7 @@ const AdminInstitutions = {
           <button class="btn btn-danger btn-sm" onclick="AdminInstitutions._quitarHorario('${h.id}')">Quitar</button>
         </div>`).join('')
       : `<div style="padding:12px 0;color:var(--text-3);font-size:.85rem">
-           Sin vínculo explícito — mientras el nombre de la materia coincida con el del cronograma (${m.year ? m.year + '° año' : 'mismo año'}),
+           Sin vínculo explícito — mientras el nombre de la materia coincida con el del cronograma (${m.year ? m.year + '°' + (m.division ? ' ' + m.division : '') : 'mismo año y división'}),
            el sistema ya lo matchea solo y no hace falta vincular nada acá.
          </div>`;
 

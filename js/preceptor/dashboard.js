@@ -14,8 +14,8 @@ const PreceptorDashboard = {
     { studentId: '24ee0fc2-1221-484e-9fa3-416ba82a80bf', subjectName: 'Informática Aplicada', motivo: 'Anotado en "Informática Aplicada" (materia de 1°) siendo alumno de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
     { studentId: '517ee448-4017-4c5a-99ef-b9d23a6da820', subjectName: 'Prácticas Profesionalizantes I', motivo: 'Anotada en "Prácticas Profesionalizantes I" (materia de 1°B) siendo alumna de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
     { studentId: 'cb60bed2-691e-4154-9df9-e6b5137a5060', subjectName: 'Prácticas Profesionalizantes I', motivo: 'Anotado en "Prácticas Profesionalizantes I" (materia de 1°B) siendo alumno de 2°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
-    { studentId: '7f89c65e-5cee-4ecb-902a-91dbaee15fb1', subjectName: 'Práctica Profesionalizante II', motivo: 'Anotada en "Práctica Profesionalizante II" (materia de 2°A) siendo alumna de 3°A. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
     { studentId: '016d524e-52b9-4d93-a042-db4ddde6f359', subjectName: 'Práctica Profesionalizante II', motivo: 'Anotado en "Práctica Profesionalizante II" (materia de 2°A) siendo alumno de 1°B. Definir si adeuda la materia (recursante) o es un error de inscripción.' },
+    { studentId: '77288779-7943-4e04-baa5-fd40ff03e92b', subjectName: null, motivo: '⚠ Error en las listas oficiales: figura a la vez en la lista de 1°A y en la de 1°B. Se le dejó el curso vacío hasta confirmar cuál es — después cargarlo en Admin → Alumnos.' },
   ],
 
   // Umbrales de 3 niveles (más matiz que el binario 70% del resto de la app)

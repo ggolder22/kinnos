@@ -188,7 +188,7 @@ const CONTENIDO = {
       `},
       { icon: '👥', title: 'Alumnos', body: `
         <p>Pestaña <strong>Alumnos</strong> de la materia: lista de inscriptos, con botón para agregar alumnos por DNI (deben estar registrados en Kinnos) y quitarlos.</p>
-        <p>Ahí mismo mostrás el <strong>código de inscripción</strong> de la materia (para que se anoten solos) y podés elegir <strong>a qué división</strong> le das la materia: <em>Ambas</em>, <em>Solo A</em> o <em>Solo B</em>. Esto controla quién puede anotarse.</p>
+        <p>Ahí mismo mostrás el <strong>código de inscripción</strong> de la materia (para que se anoten solos) y ves de qué curso es la materia (año y división). Solo se pueden anotar alumnos de ese curso.</p>
       `},
       { icon: '📝', title: 'Exámenes', body: `
         <h4>Crear un examen</h4>
@@ -238,7 +238,7 @@ const CONTENIDO = {
       `},
       { icon: '📚', title: 'Plan de estudios (materias)', body: `
         <p>Entrando a una carrera, pestaña de materias: "+ Nueva materia" para cargar el plan de estudios completo — nombre, año, despliegue (cuatrimestral/anual), campo de formación, horas cátedra.</p>
-        <p>Ahí también definís la <strong>División</strong> de cada materia: <em>Ambas</em> (por defecto), <em>Solo A</em> o <em>Solo B</em> — si tu institución divide los cursos.</p>
+        <p>Ahí también definís la <strong>División</strong> de cada materia (obligatoria): cada materia es de un solo curso. 1°A y 1°B son materias distintas, con sus propios alumnos, horarios y profesores — si se dicta en las dos divisiones, se cargan dos materias.</p>
         <p>El <strong>código de inscripción</strong> se genera solo, no hace falta escribirlo.</p>
       `},
       { icon: '👨‍🏫', title: 'Profesores', body: `

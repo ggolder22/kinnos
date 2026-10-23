@@ -414,7 +414,14 @@ const AdminAlumnosImport = {
         payload.full_name = `${payload.first_name ?? existente.first_name ?? ''} ${payload.last_name ?? existente.last_name ?? ''}`.trim() || existente.full_name;
       }
       const { error } = await sb.from('students').update(payload).eq('id', existente.id);
-      if (error) errFix++; else okFix++;
+      if (error) { errFix++; continue; }
+      okFix++;
+
+      // Si cambió el curso, se muda a las materias de su nueva división (con su historial)
+      if ('anio' in payload || 'division' in payload) {
+        const { error: e2 } = await sb.rpc('kinnos_reubicar_alumno', { p_student: existente.id });
+        if (e2) errFix++;
+      }
     }
 
     Utils.btnLoading(btn, false);

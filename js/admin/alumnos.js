@@ -226,9 +226,31 @@ const AdminAlumnos = {
       Utils.toast(error.message.includes('unique') ? 'Ya existe un alumno con ese DNI.' : error.message, 'error');
       return;
     }
-    Utils.toast(id ? 'Alumno actualizado' : 'Alumno creado');
+
+    // Si le cambiaron el curso, se muda solo a las materias de su nueva división
+    // (con exámenes, TPs y asistencia) — ver sql/divisiones-definitivas.sql
+    const cambioCurso = existente && (existente.anio !== anio || existente.division !== division);
+    if (cambioCurso) {
+      const movidos = await this.reubicar(id);
+      if (movidos === null) return;
+      Utils.toast(movidos ? `Alumno actualizado — se movió a ${movidos} materia${movidos !== 1 ? 's' : ''} de ${anio}°${division || ''}` : 'Alumno actualizado');
+    } else {
+      Utils.toast(id ? 'Alumno actualizado' : 'Alumno creado');
+    }
     this.closeModal();
     this.init();
+  },
+
+  // Devuelve cuántas materias se movieron, o null si hubo error
+  async reubicar(studentId) {
+    const { data, error } = await sb.rpc('kinnos_reubicar_alumno', { p_student: studentId });
+    if (error) {
+      Utils.toast('Se guardó el curso, pero no se pudieron mover sus materias: ' + error.message, 'error');
+      return null;
+    }
+    const lineas = data || [];
+    lineas.filter(l => l.startsWith('⚠')).forEach(l => Utils.toast(l, 'error'));
+    return lineas.filter(l => !l.startsWith('⚠')).length;
   },
 
   async delete(id, name) {

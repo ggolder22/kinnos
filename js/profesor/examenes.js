@@ -108,7 +108,6 @@ const ProfesorExamenes = {
     document.getElementById('exam-modal-tiempo').value      = item?.time_limit   || '';
     document.getElementById('exam-modal-instruc').value     = item?.instructions || '';
     document.getElementById('exam-modal-practica').checked  = item?.is_practice  || false;
-    document.getElementById('exam-modal-division').value    = item?.division    || '';
     document.getElementById('exam-modal-pdf-file').value    = '';
 
     const pdfActual = document.getElementById('exam-pdf-actual');
@@ -141,7 +140,6 @@ const ProfesorExamenes = {
     const time_limit = parseInt(document.getElementById('exam-modal-tiempo').value) || null;
     const instruc    = document.getElementById('exam-modal-instruc').value.trim();
     const is_practice = document.getElementById('exam-modal-practica').checked;
-    const division   = document.getElementById('exam-modal-division').value || null;
     const fileInput  = document.getElementById('exam-modal-pdf-file');
     const file       = fileInput.files[0];
 
@@ -170,7 +168,8 @@ const ProfesorExamenes = {
       time_limit: is_practice ? null : time_limit,
       instructions: instruc || null,
       is_practice,
-      division,
+      // La división la define la materia (1°A y 1°B son materias distintas)
+      division: null,
       subject_id: ProfesorState.materia.id,
       ...(pdf_url ? { pdf_url } : {}),
     };
@@ -1161,14 +1160,6 @@ Mis instrucciones para el examen:
           <input type="checkbox" id="imp-practica" style="width:auto">
           <label for="imp-practica" style="text-transform:none;font-size:.875rem;cursor:pointer">Es examen de práctica (sin nota, repetible)</label>
         </div>
-        <div class="form-group" style="margin:12px 0 0">
-          <label>¿Para qué división es este examen?</label>
-          <select id="imp-division">
-            <option value="">Ambas divisiones (A y B)</option>
-            <option value="A">Solo división A</option>
-            <option value="B">Solo división B</option>
-          </select>
-        </div>
       </div>
 
       <!-- Lista de preguntas -->
@@ -1201,7 +1192,6 @@ Mis instrucciones para el examen:
     const time_limit   = parseInt(document.getElementById('imp-tiempo')?.value) || null;
     const instructions = this._importData.instructions || null;
     const is_practice  = document.getElementById('imp-practica')?.checked || false;
-    const division     = document.getElementById('imp-division')?.value || null;
 
     Utils.btnLoading(btn, true);
 
@@ -1212,7 +1202,6 @@ Mis instrucciones para el examen:
       time_limit: is_practice ? null : time_limit,
       instructions,
       is_practice,
-      division,
     }).select().single();
 
     if (examErr) {

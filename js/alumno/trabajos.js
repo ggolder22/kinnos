@@ -4,16 +4,18 @@ const AlumnoTrabajos = {
     el.innerHTML = '<div class="loading">Cargando…</div>';
     const session = Auth.session();
 
-    const { data: trabajos, error } = await sb
+    // Traemos TODOS los TPs (no solo los activos): si el profesor desactiva uno
+    // después de corregirlo, el alumno igual tiene que ver su entrega y su nota —
+    // abajo se ocultan solo los inactivos en los que el alumno no entregó nada.
+    const { data: todos, error } = await sb
       .from('assignments')
       .select('*')
       .eq('subject_id', AlumnoState.materia.id)
-      .eq('is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) { Utils.toast('Error al cargar trabajos prácticos', 'error'); return; }
 
-    const tpIds = (trabajos || []).map(t => t.id);
+    const tpIds = (todos || []).map(t => t.id);
     let entregas = {};
     if (tpIds.length) {
       const { data: subs } = await sb
@@ -24,7 +26,8 @@ const AlumnoTrabajos = {
       (subs || []).forEach(s => { entregas[s.assignment_id] = s; });
     }
 
-    this._render(trabajos || [], entregas);
+    const trabajos = (todos || []).filter(t => t.is_active || entregas[t.id]);
+    this._render(trabajos, entregas);
   },
 
   _render(trabajos, entregas) {
@@ -69,10 +72,11 @@ const AlumnoTrabajos = {
                 ${entrega.grade != null ? `<div style="font-size:1rem;font-weight:700;color:var(--accent)">${entrega.grade}/10</div>` : ''}
                 ${entrega.professor_notes ? `<div style="font-size:.8rem;color:var(--text-2)"><strong>Docente:</strong> ${entrega.professor_notes}</div>` : ''}
               </div>` : ''}
+            ${tp.is_active ? `
             <div style="margin-top:10px">
               <input type="file" id="tp-file-${tp.id}" accept=".pdf,application/pdf" style="font-size:.8rem">
               <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="AlumnoTrabajos.entregar('${tp.id}')">Reemplazar entrega</button>
-            </div>
+            </div>` : ''}
           </div>`;
       } else {
         entregaHtml = `

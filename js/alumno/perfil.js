@@ -23,6 +23,10 @@ const AlumnoPerfil = {
     document.getElementById('miperfil-phone').value     = a.phone || '';
     document.getElementById('miperfil-anio').value      = a.anio  || '';
     document.getElementById('miperfil-division').value  = a.division || '';
+    // Una vez cargado, el curso lo corrige solo preceptoría o el administrador
+    const cursoFijo = !!(a.anio && a.division);
+    document.getElementById('miperfil-anio').disabled     = cursoFijo;
+    document.getElementById('miperfil-division').disabled = cursoFijo;
 
     const hint = document.getElementById('miperfil-legacy-hint');
     if (!a.first_name && !a.last_name && a.full_name) {
@@ -82,8 +86,9 @@ const AlumnoPerfil = {
     const phone    = document.getElementById('miperfil-phone').value.trim();
     const instId   = document.getElementById('miperfil-inst').value;
     const carreraId = document.getElementById('miperfil-carrera').value;
-    const anio     = parseInt(document.getElementById('miperfil-anio').value) || null;
-    const division = document.getElementById('miperfil-division').value || null;
+    const cursoFijo = !!(this._alumno.anio && this._alumno.division);
+    const anio     = cursoFijo ? this._alumno.anio     : parseInt(document.getElementById('miperfil-anio').value) || null;
+    const division = cursoFijo ? this._alumno.division : document.getElementById('miperfil-division').value || null;
 
     if (!dni) { Utils.toast('El DNI es obligatorio', 'error'); return; }
 

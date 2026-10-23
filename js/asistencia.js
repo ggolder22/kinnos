@@ -30,26 +30,31 @@ const Asistencia = {
     return data || null;
   },
 
-  // Trae los horarios de una materia desde el cronograma. No hace falta que nadie
-  // los vincule a mano: primero busca un vínculo explícito (subject_id, cargado por
-  // el admin para casos puntuales) y si no hay, matchea en vivo por año + nombre
-  // (y división, si la materia la tiene definida).
+  // Trae los horarios de una materia desde el cronograma. Cada materia es de una
+  // sola división (1°A y 1°B son materias distintas, con otros días y profesores),
+  // así que solo se usan bloques de ESA división — nunca los de la otra.
+  // Junta el vínculo explícito (subject_id) con los bloques sueltos que coinciden
+  // por año + división + nombre, para que un vínculo parcial no deje días afuera.
   async cargarHorariosDeMateria(materia) {
     if (!materia?.id) return [];
 
     const { data: vinculados } = await sb.from('schedules').select('*').eq('subject_id', materia.id);
-    if (vinculados?.length) return vinculados;
 
-    if (!materia.name || !materia.year) return [];
-    const { data: porNombre } = await sb
-      .from('schedules').select('*')
-      .eq('anio', materia.year)
-      .ilike('subject_name', materia.name.trim());
+    let porNombre = [];
+    if (materia.name && materia.year) {
+      const { data } = await sb
+        .from('schedules').select('*')
+        .is('subject_id', null)
+        .eq('anio', materia.year)
+        .ilike('subject_name', materia.name.trim());
+      porNombre = data || [];
+    }
 
-    if (!porNombre?.length) return [];
-    return materia.division
-      ? porNombre.filter(r => !r.division || r.division === materia.division)
-      : porNombre;
+    const deMiDivision = r => !materia.division || r.division === materia.division;
+    const todos = [...(vinculados || []), ...porNombre].filter(deMiDivision);
+
+    // El mismo bloque puede estar cargado dos veces en el cronograma
+    return [...new Map(todos.map(r => [`${r.day}|${r.time_start}|${r.is_consulta}`, r])).values()];
   },
 
   diaDeHoy() {
