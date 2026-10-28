@@ -81,6 +81,155 @@ const ProfesorPlanificacion = {
 
     this._planning = planning;
     this._render(planning, units || [], subject);
+    await this._cargarCondicion();
+  },
+
+  // ── Condición de la materia (Regular / Promocional) ──────────────
+  // Se carga una vez por ciclo lectivo y queda bloqueada; para cambiarla
+  // el profesor pide autorización y la resuelve un preceptor.
+  // Tablas: subject_conditions + condition_change_requests (sql/condicion-materia.sql)
+
+  CONDICIONES: ['Regular', 'Promocional'],
+  _condicion:  null,
+  _solicitud:  null, // la última solicitud de cambio de este ciclo (pendiente o resuelta)
+
+  async _cargarCondicion() {
+    const materia = ProfesorState.materia;
+    const ciclo   = new Date().getFullYear();
+    const [{ data: cond }, { data: sols }] = await Promise.all([
+      sb.from('subject_conditions').select('*')
+        .eq('subject_id', materia.id).eq('anio_academico', ciclo).maybeSingle(),
+      sb.from('condition_change_requests').select('*')
+        .eq('subject_id', materia.id).eq('anio_academico', ciclo)
+        .order('requested_at', { ascending: false }).limit(1),
+    ]);
+    this._condicion = cond || null;
+    this._solicitud = sols?.[0] || null;
+    this._renderCondicion();
+  },
+
+  _renderCondicion(mostrarFormSolicitud = false) {
+    const el = document.getElementById('plan-condicion');
+    if (!el) return;
+    const c = this._condicion, s = this._solicitud;
+    const esc = t => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+    // Todavía no se cargó: desplegable + guardar
+    if (!c) {
+      el.innerHTML = `
+        <div class="plan-section-label">Condición de la materia</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="plan-condicion-select" style="width:auto;min-width:200px">
+            <option value="">Elegí la condición…</option>
+            ${this.CONDICIONES.map(o => `<option value="${o}">${o}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" id="plan-condicion-btn" onclick="ProfesorPlanificacion.guardarCondicion()">Guardar condición</button>
+        </div>
+        <div class="plan-section-hint" style="margin-top:8px">
+          ⚠ Una vez guardada <strong>no se puede cambiar</strong>: para modificarla vas a tener que pedir autorización a Preceptoría.
+        </div>`;
+      return;
+    }
+
+    const pendiente = s?.status === 'pending' ? s : null;
+    const resuelta  = s && s.status !== 'pending' ? s : null;
+
+    let solicitudHtml = '';
+    if (pendiente) {
+      solicitudHtml = `
+        <div style="margin-top:12px;padding:10px 12px;border:1px solid var(--warning);border-radius:8px;font-size:.82rem">
+          <div style="color:var(--warning);font-weight:600">⏳ Pediste cambiarla a ${pendiente.condicion_nueva} — esperando a Preceptoría</div>
+          <div style="color:var(--text-3);margin-top:4px">Motivo: ${esc(pendiente.motivo)} · ${Utils.formatDate(pendiente.requested_at)}</div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="ProfesorPlanificacion.cancelarSolicitud()">Cancelar solicitud</button>
+        </div>`;
+    } else if (mostrarFormSolicitud) {
+      const nueva = this.CONDICIONES.find(o => o !== c.condicion);
+      solicitudHtml = `
+        <div style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px">
+          <div style="font-size:.85rem;color:var(--text-1);margin-bottom:8px">Pedir cambio de <strong>${c.condicion}</strong> a <strong>${nueva}</strong></div>
+          <textarea id="plan-condicion-motivo" rows="2" placeholder="Motivo del cambio (obligatorio)" style="width:100%"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-ghost btn-sm" onclick="ProfesorPlanificacion._renderCondicion(false)">Cancelar</button>
+            <button class="btn btn-primary btn-sm" id="plan-condicion-sol-btn" onclick="ProfesorPlanificacion.enviarSolicitud()">Enviar a Preceptoría</button>
+          </div>
+        </div>`;
+    } else {
+      solicitudHtml = `
+        ${resuelta ? `
+          <div style="margin-top:10px;font-size:.8rem;color:${resuelta.status === 'approved' ? 'var(--success)' : 'var(--danger)'}">
+            ${resuelta.status === 'approved' ? '✓ Aprobado' : '✗ Rechazado'} el pedido de cambio a ${resuelta.condicion_nueva}
+            ${resuelta.resolved_by_name ? '— ' + esc(resuelta.resolved_by_name) : ''}${resuelta.resolved_at ? ', ' + Utils.formatDate(resuelta.resolved_at) : ''}
+            ${resuelta.respuesta ? `<div style="color:var(--text-3);margin-top:2px">"${esc(resuelta.respuesta)}"</div>` : ''}
+          </div>` : ''}
+        <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="ProfesorPlanificacion._renderCondicion(true)">Solicitar cambio</button>`;
+    }
+
+    el.innerHTML = `
+      <div class="plan-section-label">Condición de la materia</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="badge ${c.condicion === 'Promocional' ? 'badge-green' : 'badge-indigo'}" style="font-size:.85rem;padding:4px 14px">🔒 ${c.condicion}</span>
+        <span style="font-size:.75rem;color:var(--text-3)">Cargada por ${esc(c.set_by_name || '—')} el ${Utils.formatDate(c.set_at)}</span>
+      </div>
+      ${solicitudHtml}`;
+  },
+
+  async guardarCondicion() {
+    const valor = document.getElementById('plan-condicion-select').value;
+    if (!valor) { Utils.toast('Elegí Regular o Promocional', 'error'); return; }
+    if (!await Utils.confirmar(`¿Guardar la condición "${valor}"?\n\nDespués no se puede cambiar sin autorización de Preceptoría.`)) return;
+
+    const session = Auth.session();
+    const btn = document.getElementById('plan-condicion-btn');
+    Utils.btnLoading(btn, true);
+    const { error } = await sb.from('subject_conditions').insert({
+      subject_id: ProfesorState.materia.id,
+      anio_academico: new Date().getFullYear(),
+      condicion: valor,
+      set_by_professor_id: session.id,
+      set_by_name: session.nombre || `DNI ${session.dni}`,
+    });
+    Utils.btnLoading(btn, false);
+    if (error) {
+      // Otro profesor de la misma materia la cargó recién
+      Utils.toast(error.code === '23505' ? 'La condición ya había sido cargada por otro profesor.' : 'Error: ' + error.message, 'error');
+    } else {
+      Utils.toast(`Condición guardada: ${valor}`);
+    }
+    await this._cargarCondicion();
+  },
+
+  async enviarSolicitud() {
+    const motivo = document.getElementById('plan-condicion-motivo').value.trim();
+    if (!motivo) { Utils.toast('Escribí el motivo del cambio', 'error'); return; }
+    const session = Auth.session();
+    const c = this._condicion;
+    const btn = document.getElementById('plan-condicion-sol-btn');
+    Utils.btnLoading(btn, true);
+    const { error } = await sb.from('condition_change_requests').insert({
+      subject_id: c.subject_id,
+      anio_academico: c.anio_academico,
+      condicion_actual: c.condicion,
+      condicion_nueva: this.CONDICIONES.find(o => o !== c.condicion),
+      motivo,
+      requested_by_professor_id: session.id,
+      requested_by_name: session.nombre || `DNI ${session.dni}`,
+    });
+    Utils.btnLoading(btn, false);
+    if (error) {
+      Utils.toast(error.code === '23505' ? 'Ya hay una solicitud pendiente para esta materia.' : 'Error: ' + error.message, 'error');
+    } else {
+      Utils.toast('Solicitud enviada a Preceptoría');
+    }
+    await this._cargarCondicion();
+  },
+
+  async cancelarSolicitud() {
+    if (!await Utils.confirmar('¿Cancelar la solicitud de cambio?')) return;
+    const { error } = await sb.from('condition_change_requests').delete()
+      .eq('id', this._solicitud.id).eq('status', 'pending');
+    if (error) { Utils.toast('Error: ' + error.message, 'error'); return; }
+    Utils.toast('Solicitud cancelada');
+    await this._cargarCondicion();
   },
 
   _render(planning, units, subject) {
@@ -114,6 +263,10 @@ const ProfesorPlanificacion = {
           <div><span class="plan-meta-label">Ciclo lectivo</span><span class="plan-meta-val">${ciclo}</span></div>
           <div><span class="plan-meta-label">Carga horaria</span><span class="plan-meta-val">${hsSem} · ${hsTot}</span></div>
         </div>
+      </div>
+
+      <div class="plan-section" id="plan-condicion" style="margin-top:18px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px">
+        <div class="loading">Cargando condición…</div>
       </div>
 
       <div class="plan-sections">
@@ -301,6 +454,7 @@ const ProfesorPlanificacion = {
     set('pp-year',    materia.year ? `${materia.year}° Año` : '—');
     set('pp-prof',    session.nombre || 'DNI ' + session.dni);
     set('pp-ciclo',   String(ciclo));
+    set('pp-condicion', this._condicion?.condicion || '(sin cargar)');
 
     const units = this._getUnitsFromEditor().filter(u => u.title);
     const contenidosText = units.map(u => {

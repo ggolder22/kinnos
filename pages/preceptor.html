@@ -36,6 +36,10 @@
       <div class="nav-item" id="nav-calendario" onclick="showPage('calendario')">
         <span class="icon">🚫</span> Calendario
       </div>
+      <div class="nav-item" id="nav-condiciones" onclick="showPage('condiciones')">
+        <span class="icon">🔒</span> Condición de materias
+        <span id="condiciones-badge" class="badge" style="margin-left:auto;background:var(--warning);color:#000;display:none"></span>
+      </div>
       <div class="nav-section" style="margin-top:8px">Equipo</div>
       <div class="nav-item" id="nav-ideas" onclick="showPage('ideas')">
         <span class="icon">💡</span> Ideas
@@ -77,6 +81,10 @@
 
     <div class="page" id="page-calendario">
       <div id="calendario-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <div class="page" id="page-condiciones">
+      <div id="condiciones-content"><div class="loading">Cargando…</div></div>
     </div>
 
     <div class="page" id="page-ideas">
@@ -125,6 +133,7 @@
 <script src="../js/preceptor/asistencia.js"></script>
 <script src="../js/preceptor/notas.js"></script>
 <script src="../js/preceptor/calendario.js"></script>
+<script src="../js/preceptor/condiciones.js"></script>
 <script src="../js/ideas.js"></script>
 <script>
   if (!Auth.require('preceptor')) throw new Error('no-auth');
@@ -132,8 +141,8 @@
   const session = Auth.session();
   document.getElementById('preceptor-greeting').textContent = session.nombre || `DNI ${session.dni}`;
 
-  const titles = { dashboard: 'Dashboard', alumnos: 'Alumnos', asistencia: 'Asistencia', notas: 'Calificaciones', calendario: 'Calendario', ideas: 'Ideas' };
-  const modulos = { dashboard: PreceptorDashboard, alumnos: PreceptorAlumnos, asistencia: PreceptorAsistencia, notas: PreceptorNotas, calendario: PreceptorCalendario, ideas: Ideas };
+  const titles = { dashboard: 'Dashboard', alumnos: 'Alumnos', asistencia: 'Asistencia', notas: 'Calificaciones', calendario: 'Calendario', condiciones: 'Condición de materias', ideas: 'Ideas' };
+  const modulos = { dashboard: PreceptorDashboard, alumnos: PreceptorAlumnos, asistencia: PreceptorAsistencia, notas: PreceptorNotas, calendario: PreceptorCalendario, condiciones: PreceptorCondiciones, ideas: Ideas };
 
   function showPage(nombre) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -145,6 +154,7 @@
   }
 
   showPage('dashboard');
+  PreceptorCondiciones.actualizarBadge();
 
   function toggleDrawer() {
     document.querySelector('.sidebar').classList.toggle('open');
