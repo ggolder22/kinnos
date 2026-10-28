@@ -88,6 +88,15 @@
 </div>
 
 <script>
+// Tablero de ideas: es el mismo para admin, profesores y preceptores
+const AYUDA_IDEAS = { icon: '💡', title: 'Ideas', body: `
+  <p>En el menú, sección <strong>Equipo → Ideas</strong>: un tablero compartido entre el administrador, los profesores y los preceptores para anotar ideas o mejoras para la app. Los alumnos no lo ven.</p>
+  <p>Escribí la idea y tocá <strong>Publicar idea</strong>. Queda registrado quién la escribió y la fecha y hora.</p>
+  <p>Podés adjuntar <strong>varios archivos</strong> (hasta 20 MB cada uno) con el botón 📎, <strong>arrastrándolos</strong> al recuadro, o <strong>pegando una captura de pantalla con Ctrl+V</strong> dentro del texto. Las imágenes se ven en miniatura; tocá una para verla grande.</p>
+  <p>Cuando una idea ya está hecha, <strong>tildala</strong>: queda registrado quién la tildó y cuándo, y pasa a la pestaña <em>Hechas</em> (se puede destildar). Una idea solo la puede borrar quien la escribió o el administrador.</p>
+  <p>No subas datos personales o confidenciales (DNIs, certificados, etc.): es un espacio para ideas de desarrollo.</p>
+`};
+
 const CONTENIDO = {
   alumno: {
     label: '🎓 Alumno',
@@ -227,6 +236,7 @@ const CONTENIDO = {
       { icon: '📋', title: 'Mi Legajo', body: `
         <p>Tus datos personales (nombre, DNI, email, teléfono) — accesible desde el botón ⚙ arriba a la derecha o "Mi Legajo" en el menú.</p>
       `},
+      AYUDA_IDEAS,
     ],
   },
 
@@ -248,6 +258,7 @@ const CONTENIDO = {
       { icon: '🎓', title: 'Alumnos', body: `
         <p>Alta, edición y baja de alumnos. Desde acá también podés asignarles directamente <strong>Año y División</strong> (ej: 1° B) sin que el alumno tenga que hacerlo — muy útil para cargar un curso entero de una.</p>
       `},
+      AYUDA_IDEAS,
     ],
   },
 };
