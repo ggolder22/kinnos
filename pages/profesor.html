@@ -35,6 +35,10 @@
       <div class="nav-item" id="nav-legajo" onclick="ProfesorLegajo.abrir()">
         <span class="icon">📋</span> Mi Legajo
       </div>
+      <div class="nav-section" style="margin-top:8px">Equipo</div>
+      <div class="nav-item" id="nav-ideas" onclick="abrirIdeas()">
+        <span class="icon">💡</span> Ideas
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
@@ -118,6 +122,10 @@
 
     <div class="page" id="page-legajo">
       <div id="legajo-content"></div>
+    </div>
+
+    <div class="page" id="page-ideas">
+      <div id="ideas-content"></div>
     </div>
 
     <div class="page" id="page-planificacion">
@@ -652,6 +660,7 @@
 <script src="../js/profesor/legajo.js"></script>
 <script src="../js/profesor/planificacion.js"></script>
 <script src="../js/profesor/ejercicios_prof.js"></script>
+<script src="../js/ideas.js"></script>
 
 <script>
   if (!Auth.require('profesor')) throw new Error('no-auth');
@@ -697,6 +706,18 @@
   }
 
   ProfesorMaterias.init();
+
+  // Tablero de ideas compartido con el admin y los preceptores (no depende de la materia)
+  function abrirIdeas() {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-ideas').classList.add('active');
+    document.getElementById('tabs-bar').classList.add('hidden');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-ideas').classList.add('active');
+    document.getElementById('topbar-materia').textContent = 'Ideas';
+    document.getElementById('topbar-sub').textContent = '';
+    Ideas.init();
+  }
 
   function toggleDrawer() {
     document.querySelector('.sidebar').classList.toggle('open');

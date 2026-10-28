@@ -33,6 +33,10 @@
       <div class="nav-item" id="nav-preceptores" onclick="showPage('preceptores')">
         <span class="icon">🗂️</span> Preceptores
       </div>
+      <div class="nav-section" style="margin-top:8px">Equipo</div>
+      <div class="nav-item" id="nav-ideas" onclick="showPage('ideas')">
+        <span class="icon">💡</span> Ideas
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost" style="width:100%" onclick="Auth.logout()">Cerrar sesión</button>
@@ -71,6 +75,11 @@
     <!-- Página: Preceptores -->
     <div class="page" id="page-preceptores">
       <div id="preceptores-content"><div class="loading">Cargando…</div></div>
+    </div>
+
+    <!-- Página: Ideas (compartida con profesores y preceptores) -->
+    <div class="page" id="page-ideas">
+      <div id="ideas-content"><div class="loading">Cargando…</div></div>
     </div>
   </div>
 
@@ -396,6 +405,7 @@
 <script src="../js/admin/alumnos.js"></script>
 <script src="../js/admin/alumnos-import.js"></script>
 <script src="../js/admin/preceptors.js"></script>
+<script src="../js/ideas.js"></script>
 
 <script>
   if (!Auth.require('admin')) throw new Error('no-auth');
@@ -414,8 +424,8 @@
     });
   });
 
-  const navIds = { instituciones: 'inst', profesores: 'prof', alumnos: 'alumnos', preceptores: 'preceptores' };
-  const titles  = { instituciones: 'Instituciones', profesores: 'Profesores', alumnos: 'Alumnos', preceptores: 'Preceptores' };
+  const navIds = { instituciones: 'inst', profesores: 'prof', alumnos: 'alumnos', preceptores: 'preceptores', ideas: 'ideas' };
+  const titles  = { instituciones: 'Instituciones', profesores: 'Profesores', alumnos: 'Alumnos', preceptores: 'Preceptores', ideas: 'Ideas' };
 
   function showPage(nombre) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -430,6 +440,7 @@
     if (nombre === 'profesores')    AdminProfessors.init();
     if (nombre === 'alumnos')       AdminAlumnos.init();
     if (nombre === 'preceptores')   AdminPreceptors.init();
+    if (nombre === 'ideas')         Ideas.init();
   }
 
   showPage('instituciones');
