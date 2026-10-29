@@ -14,7 +14,8 @@ const ProfesorAlumnos = {
       .order('enrolled_at', { ascending: false });
 
     if (error) { Utils.toast('Error al cargar alumnos', 'error'); return; }
-    this._todos = data || [];
+    // Orden alfabético por apellido (criterio ministerio), no por fecha de inscripción
+    this._todos = (data || []).sort((a, b) => Utils.nombrePlanilla(a.students).localeCompare(Utils.nombrePlanilla(b.students)));
     this._render(this._aplicarFiltros());
   },
 
