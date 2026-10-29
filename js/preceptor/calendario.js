@@ -66,49 +66,51 @@ const PreceptorCalendario = {
         fecha de hoy o anterior, se justifica automáticamente a los alumnos afectados que ya tuvieran algo registrado.
       </p>
 
-      <div class="card" style="max-width:520px;margin-bottom:28px">
-        <div class="form-group">
-          <label>Fecha</label>
-          <input type="date" id="cal-fecha" value="${hoy}">
-        </div>
-        <div class="form-group">
-          <label>Motivo</label>
-          <input type="text" id="cal-motivo" placeholder="Ej: Corte de agua de red, Feriado nacional…">
-        </div>
-        <div class="form-group">
-          <label>Alcance</label>
-          <select id="cal-alcance" onchange="PreceptorCalendario._toggleAlcance()">
-            <option value="institucion">Toda la institución</option>
-            <option value="acotado">Año y división específicos</option>
-          </select>
-        </div>
-        <div id="cal-alcance-detalle" style="display:none;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;margin-bottom:28px">
+        <div class="card" style="flex:1;min-width:320px;max-width:520px">
           <div class="form-group">
-            <label>Año</label>
-            <select id="cal-anio">
-              ${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}">${n}°</option>`).join('')}
-            </select>
+            <label>Fecha</label>
+            <input type="date" id="cal-fecha" value="${hoy}">
           </div>
           <div class="form-group">
-            <label>División</label>
-            <select id="cal-division">
-              <option value="">Ambas (A y B)</option>
-              <option value="A">Solo A</option>
-              <option value="B">Solo B</option>
+            <label>Motivo</label>
+            <input type="text" id="cal-motivo" placeholder="Ej: Corte de agua de red, Feriado nacional…">
+          </div>
+          <div class="form-group">
+            <label>Alcance</label>
+            <select id="cal-alcance" onchange="PreceptorCalendario._toggleAlcance()">
+              <option value="institucion">Toda la institución</option>
+              <option value="acotado">Año y división específicos</option>
             </select>
           </div>
+          <div id="cal-alcance-detalle" style="display:none;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label>Año</label>
+              <select id="cal-anio">
+                ${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}">${n}°</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>División</label>
+              <select id="cal-division">
+                <option value="">Ambas (A y B)</option>
+                <option value="A">Solo A</option>
+                <option value="B">Solo B</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="cal-save-btn" onclick="PreceptorCalendario.declarar()">Declarar día sin clases</button>
         </div>
-        <button class="btn btn-primary" id="cal-save-btn" onclick="PreceptorCalendario.declarar()">Declarar día sin clases</button>
+
+        <div style="flex:1;min-width:320px">
+          ${this._renderCalendarioMensual()}
+        </div>
       </div>
 
       <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">
         Días cargados (${dias.length})
       </div>
-      ${dias.length ? rows : '<div style="color:var(--text-3);font-size:.85rem;padding:12px 0">Todavía no cargaste ningún día.</div>'}
-
-      <div style="margin-top:28px">
-        ${this._renderCalendarioMensual()}
-      </div>`;
+      ${dias.length ? rows : '<div style="color:var(--text-3);font-size:.85rem;padding:12px 0">Todavía no cargaste ningún día.</div>'}`;
   },
 
   _toggleAlcance() {
