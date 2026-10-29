@@ -186,14 +186,14 @@ const PreceptorNotas = {
       .filter(n => n.score !== null || n.concepto !== null)
       .map(n => {
         const item = n.manual_grade_items;
-        const esNumerica = item?.tipo === 'numerica';
+        const tieneScore = n.score !== null;
         return {
           materia: item?.subjects?.name || '—',
           titulo: item?.title || '—',
           origen: 'Manual',
-          notaTexto: esNumerica ? String(n.score) : (n.concepto || '—'),
-          notaNumerica: esNumerica ? Number(n.score) : null,
-          color: esNumerica ? (Number(n.score) >= 6 ? 'var(--success)' : 'var(--danger)') : 'var(--text-1)',
+          notaTexto: tieneScore ? String(n.score) : (n.concepto || '—'),
+          notaNumerica: tieneScore ? Number(n.score) : null,
+          color: tieneScore ? (Number(n.score) >= 6 ? 'var(--success)' : 'var(--danger)') : 'var(--text-3)',
           estado: 'confirmed',
           estadoBadge: '<span class="badge badge-indigo">Manual</span>',
           fecha: item?.fecha ? item.fecha + 'T00:00:00' : n.updated_at,

@@ -60,7 +60,7 @@ const AlumnoCalificaciones = {
         return {
           tipo: 'Manual',
           titulo: item?.title || '—',
-          nota: item?.tipo === 'numerica' ? `${n.score}/10` : (n.concepto || '—'),
+          nota: n.score !== null ? `${n.score}/10` : (n.concepto || '—'),
           fecha: item?.fecha ? item.fecha + 'T00:00:00' : n.updated_at,
           obs: n.observaciones || '',
         };
