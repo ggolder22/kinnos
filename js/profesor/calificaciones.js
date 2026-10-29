@@ -1,6 +1,6 @@
 const ProfesorCalificaciones = {
   _items: [],
-  _itemActual: null,   // instancia abierta para cargar notas
+  _itemActual: null,   // instancia abierta (cargar o ver)
   _roster: [],          // alumnos inscriptos en la materia
   _notas: {},            // student_id -> fila de manual_grades (si existe)
 
@@ -62,7 +62,10 @@ const ProfesorCalificaciones = {
           <td style="text-align:center">${n} / ${totalAlumnos}</td>
           <td>
             <div class="td-actions">
+              <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.verNotas('${i.id}')">Ver</button>
               <button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirCarga('${i.id}')">Cargar notas</button>
+              <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsvDesdeLista('${i.id}')" title="Descargar CSV">⬇ CSV</button>
+              <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActaDesdeLista('${i.id}')" title="Descargar acta en PDF">📄 PDF</button>
               <button class="btn btn-ghost btn-sm" onclick='ProfesorCalificaciones.abrirModal(${JSON.stringify(i).replace(/'/g, "&#39;")})'>Editar</button>
               <button class="btn btn-danger btn-sm" onclick="ProfesorCalificaciones.eliminar('${i.id}','${i.title.replace(/'/g, "\\'")}')">Eliminar</button>
             </div>
@@ -126,26 +129,79 @@ const ProfesorCalificaciones = {
     this._loadItems();
   },
 
-  // ── Carga de notas por alumno ─────────────────────────────
+  // ── Datos compartidos (carga, vista, CSV, PDF) ────────────
 
-  async abrirCarga(itemId) {
-    this._itemActual = this._items.find(i => i.id === itemId);
-    if (!this._itemActual) return;
-
-    const el = document.getElementById('calificaciones-content');
-    el.innerHTML = '<div class="loading">Cargando…</div>';
+  async _fetchDatos(itemId) {
+    const item = this._items.find(i => i.id === itemId) || (await sb.from('manual_grade_items').select('*').eq('id', itemId).single()).data;
 
     const [{ data: roster }, { data: notas }] = await Promise.all([
       sb.from('student_subjects').select('students(id, full_name, first_name, last_name, dni)')
-        .eq('subject_id', ProfesorState.materia.id),
+        .eq('subject_id', item.subject_id),
       sb.from('manual_grades').select('*').eq('item_id', itemId),
     ]);
 
-    this._roster = (roster || []).map(r => r.students).filter(Boolean)
+    const rosterOrdenado = (roster || []).map(r => r.students).filter(Boolean)
       .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
-    this._notas = {};
-    (notas || []).forEach(n => { this._notas[n.student_id] = n; });
+    const notasPorAlumno = {};
+    (notas || []).forEach(n => { notasPorAlumno[n.student_id] = n; });
 
+    return { item, roster: rosterOrdenado, notas: notasPorAlumno };
+  },
+
+  // ── Ver (solo lectura) ─────────────────────────────────────
+
+  async verNotas(itemId) {
+    const el = document.getElementById('calificaciones-content');
+    el.innerHTML = '<div class="loading">Cargando…</div>';
+
+    const { item, roster, notas } = await this._fetchDatos(itemId);
+    this._itemActual = item; this._roster = roster; this._notas = notas;
+
+    if (!roster.length) {
+      el.innerHTML = `
+        <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="ProfesorCalificaciones._volver()">← Volver</button>
+        <div class="empty-state"><div class="icon">👥</div><p>No hay alumnos inscriptos en esta materia todavía.</p></div>`;
+      return;
+    }
+
+    const rows = roster.map(a => {
+      const n = notas[a.id];
+      const nota = n?.score ?? n?.concepto ?? '—';
+      return `
+        <tr>
+          <td class="text-main">${Utils.nombrePlanilla(a)}</td>
+          <td>${a.dni}</td>
+          <td style="font-weight:700">${nota}</td>
+          <td style="color:var(--text-2)">${n?.observaciones || '—'}</td>
+        </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="ProfesorCalificaciones._volver()">← Volver</button>
+      <div class="page-header">
+        <h3>${item.title} <span style="font-size:.8rem;font-weight:400;color:var(--text-3)">(${item.tipo === 'numerica' ? 'numérica' : 'conceptual'}${item.fecha ? ' · ' + Utils.formatDate(item.fecha) : ''})</span></h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsv()">⬇ CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta (PDF)</button>
+          <button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirCarga('${item.id}')">Cargar / editar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Observaciones</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  },
+
+  // ── Carga de notas por alumno ─────────────────────────────
+
+  async abrirCarga(itemId) {
+    const el = document.getElementById('calificaciones-content');
+    el.innerHTML = '<div class="loading">Cargando…</div>';
+
+    const { item, roster, notas } = await this._fetchDatos(itemId);
+    this._itemActual = item; this._roster = roster; this._notas = notas;
     this._renderCarga();
   },
 
@@ -186,6 +242,7 @@ const ProfesorCalificaciones = {
         <h3>${item.title} <span style="font-size:.8rem;font-weight:400;color:var(--text-3)">(${item.tipo === 'numerica' ? 'numérica' : 'conceptual'}${item.fecha ? ' · ' + Utils.formatDate(item.fecha) : ''})</span></h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsv()">⬇ CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta (PDF)</button>
           <button class="btn btn-primary btn-sm" id="calif-save-all" onclick="ProfesorCalificaciones.guardarTodas()">Guardar notas</button>
         </div>
       </div>
@@ -231,12 +288,110 @@ const ProfesorCalificaciones = {
     this.abrirCarga(item.id);
   },
 
+  // ── Exportaciones (desde la vista abierta) ────────────────
+
   exportarCsv() {
-    const item = this._itemActual;
-    const filas = this._roster.map(a => {
-      const n = this._notas[a.id];
+    this._exportarCsvDatos(this._itemActual, this._roster, this._notas);
+  },
+
+  exportarActa() {
+    this._generarActaPDF(this._itemActual, this._roster, this._notas);
+  },
+
+  // ── Exportaciones directas desde la lista (sin entrar a la instancia) ──
+
+  async exportarCsvDesdeLista(itemId) {
+    const { item, roster, notas } = await this._fetchDatos(itemId);
+    this._exportarCsvDatos(item, roster, notas);
+  },
+
+  async exportarActaDesdeLista(itemId) {
+    const { item, roster, notas } = await this._fetchDatos(itemId);
+    this._generarActaPDF(item, roster, notas);
+  },
+
+  _exportarCsvDatos(item, roster, notas) {
+    const filas = roster.map(a => {
+      const n = notas[a.id];
       return [Utils.nombrePlanilla(a), a.dni, n?.score ?? n?.concepto ?? '', n?.observaciones ?? ''];
     });
     Utils.descargarCsv(`${item.title.replace(/[^a-z0-9]+/gi, '_')}.csv`, ['Alumno', 'DNI', 'Nota', 'Observaciones'], filas);
+  },
+
+  _numeroALetras(n) {
+    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
+    const entero  = Math.floor(n);
+    const decimal = Math.round((n - entero) * 10);
+    const base = PALABRAS[entero] ?? String(entero);
+    if (!decimal) return base;
+    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
+  },
+
+  _generarActaPDF(item, roster, notas) {
+    const conNota = roster.filter(a => notas[a.id]);
+    if (!conNota.length) { Utils.toast('Todavía no hay ninguna nota cargada en esta instancia', 'error'); return; }
+
+    const m = ProfesorState.materia;
+    const institucion = m.careers?.institutions?.name || '';
+    const carrera     = m.careers?.name || '';
+    const anioDiv = [m.year ? `${m.year}° año` : null, m.division ? `División ${m.division}` : null].filter(Boolean).join(' · ');
+
+    const rowsHtml = conNota.map((a, i) => {
+      const n = notas[a.id];
+      const esNumerica = n.score !== null;
+      const notaTexto = esNumerica ? n.score : (n.concepto || '—');
+      const notaLetras = esNumerica ? this._numeroALetras(n.score) : (n.concepto || '—');
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${Utils.nombrePlanilla(a)}</td>
+        <td>${a.dni}</td>
+        <td style="text-align:center">${notaTexto}</td>
+        <td>${notaLetras}</td>
+      </tr>`;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><title>Acta — ${item.title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 36px; color: #111; }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h1 { font-size: 1.15rem; margin-bottom: 2px; }
+        .header p { font-size: .85rem; color: #444; margin: 1px 0; }
+        .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .85rem;
+          margin: 18px 0 10px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #999; padding: 6px 10px; font-size: .85rem; text-align: left; }
+        th { background: #eee; }
+        .resumen { margin-top: 14px; font-size: .82rem; }
+        .firmas { display: flex; justify-content: center; margin-top: 90px; }
+        .firma { width: 260px; text-align: center; font-size: .82rem; }
+        .firma .linea { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; }
+      </style></head><body>
+        <div class="header">
+          <h1>${institucion || 'Institución'}</h1>
+          ${carrera ? `<p>${carrera}</p>` : ''}
+          <p>Acta de calificaciones${anioDiv ? ' — ' + anioDiv : ''}</p>
+        </div>
+
+        <div class="meta">
+          <span>Materia: <strong>${m.name || ''}</strong></span>
+          <span>Instancia: <strong>${item.title}</strong></span>
+          <span>Fecha: ${item.fecha ? Utils.formatDate(item.fecha) : Utils.formatDate(Utils.hoyLocal())}</span>
+        </div>
+
+        <table>
+          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Nota</th><th>Nota en letras</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+
+        <div class="resumen">${conNota.length} alumno${conNota.length !== 1 ? 's' : ''} con nota cargada de ${roster.length} inscriptos.</div>
+
+        <div class="firmas">
+          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Docente</div>
+        </div>
+      </body></html>`);
+    win.document.close();
+    win.print();
   },
 };
