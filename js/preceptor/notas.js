@@ -134,15 +134,6 @@ const PreceptorNotas = {
 
     const filasUnificadas = this._unificarNotas(resultados || [], manuales || []);
 
-    const filas = filasUnificadas.map(f => `
-      <tr>
-        <td>${f.materia}</td>
-        <td class="text-main">${f.titulo}</td>
-        <td style="text-align:center;font-weight:700;color:${f.color}">${f.notaTexto}</td>
-        <td>${f.estadoBadge}</td>
-        <td>${f.fecha ? Utils.formatDate(f.fecha) : '—'}</td>
-      </tr>`).join('');
-
     el.innerHTML = `
       <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="PreceptorNotas.volverBuscador()">← Volver</button>
       <div class="page-header">
@@ -150,15 +141,56 @@ const PreceptorNotas = {
         <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarAlumno()">⬇ Descargar (CSV)</button>
       </div>
       <div style="font-size:.78rem;color:var(--text-3);margin-bottom:14px">DNI ${a.dni} · ${a.anio ? a.anio + '°' : ''} ${a.division || ''}</div>
-      ${filasUnificadas.length ? `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Materia</th><th>Instancia</th><th style="text-align:center">Nota</th><th>Estado</th><th>Fecha</th></tr></thead>
-            <tbody>${filas}</tbody>
-          </table>
-        </div>` : '<div class="empty-state"><div class="icon">📝</div><p>Sin calificaciones cargadas todavía.</p></div>'}`;
+      ${this._renderPorMateria(filasUnificadas)}`;
 
     this._resultadosActuales = filasUnificadas;
+  },
+
+  // Agrupa las notas por materia — una tarjeta por materia, con su promedio
+  // (de las notas numéricas) y el detalle de cada instancia adentro.
+  _renderPorMateria(filasUnificadas) {
+    if (!filasUnificadas.length) {
+      return '<div class="empty-state"><div class="icon">📝</div><p>Sin calificaciones cargadas todavía.</p></div>';
+    }
+
+    const porMateria = {};
+    filasUnificadas.forEach(f => { (porMateria[f.materia] = porMateria[f.materia] || []).push(f); });
+
+    const grupos = Object.entries(porMateria).map(([materia, filas]) => {
+      const numericas = filas.map(f => f.notaNumerica).filter(n => n !== null && n !== undefined);
+      const promedio = numericas.length ? Math.round(numericas.reduce((a, b) => a + b, 0) / numericas.length * 10) / 10 : null;
+      return { materia, filas: filas.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')), promedio };
+    }).sort((a, b) => (a.promedio ?? 11) - (b.promedio ?? 11)); // peor promedio primero, sin nota numérica al final
+
+    return `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${grupos.map(g => {
+          const colorProm = g.promedio === null ? 'var(--text-3)' : (g.promedio >= 6 ? 'var(--success)' : 'var(--danger)');
+          const filasHtml = g.filas.map(f => `
+            <tr>
+              <td class="text-main">${f.titulo}</td>
+              <td style="text-align:center;font-weight:700;color:${f.color}">${f.notaTexto}</td>
+              <td>${f.estadoBadge}</td>
+              <td>${f.fecha ? Utils.formatDate(f.fecha) : '—'}</td>
+            </tr>`).join('');
+
+          return `
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+                <div style="font-weight:600;color:var(--text-1)">${g.materia}</div>
+                <div style="font-size:.78rem;color:var(--text-3)">
+                  ${g.promedio !== null ? `Promedio: <strong style="color:${colorProm};font-size:.95rem">${g.promedio}</strong>` : 'Sin notas numéricas'}
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Instancia</th><th style="text-align:center">Nota</th><th>Estado</th><th>Fecha</th></tr></thead>
+                  <tbody>${filasHtml}</tbody>
+                </table>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
   },
 
   // Junta exam_results (exámenes de la app) + manual_grades (parciales en papel,
