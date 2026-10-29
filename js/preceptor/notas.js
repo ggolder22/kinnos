@@ -126,23 +126,22 @@ const PreceptorNotas = {
       .neq('status', 'in_progress')
       .order('submitted_at', { ascending: false });
 
-    const filas = (resultados || []).map(r => {
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
-      const color = grade >= 6 ? 'var(--success)' : 'var(--danger)';
-      const materia = r.exams?.subjects?.name || '—';
-      const estado = r.status === 'confirmed'
-        ? '<span class="badge badge-active">Confirmado</span>'
-        : '<span class="badge badge-practice">⏳ Pendiente</span>';
-      return `
-        <tr>
-          <td>${materia}</td>
-          <td class="text-main">${r.exams?.title || '—'}</td>
-          <td style="text-align:center;font-weight:700;color:${color}">${grade}</td>
-          <td>${estado}</td>
-          <td>${Utils.formatDate(r.submitted_at)}</td>
-        </tr>`;
-    }).join('');
+    const { data: manuales } = await sb
+      .from('manual_grades')
+      .select('*, manual_grade_items(title, fecha, tipo, subjects(name))')
+      .eq('student_id', a.id)
+      .order('updated_at', { ascending: false });
+
+    const filasUnificadas = this._unificarNotas(resultados || [], manuales || []);
+
+    const filas = filasUnificadas.map(f => `
+      <tr>
+        <td>${f.materia}</td>
+        <td class="text-main">${f.titulo}</td>
+        <td style="text-align:center;font-weight:700;color:${f.color}">${f.notaTexto}</td>
+        <td>${f.estadoBadge}</td>
+        <td>${f.fecha ? Utils.formatDate(f.fecha) : '—'}</td>
+      </tr>`).join('');
 
     el.innerHTML = `
       <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="PreceptorNotas.volverBuscador()">← Volver</button>
@@ -151,26 +150,65 @@ const PreceptorNotas = {
         <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarAlumno()">⬇ Descargar (CSV)</button>
       </div>
       <div style="font-size:.78rem;color:var(--text-3);margin-bottom:14px">DNI ${a.dni} · ${a.anio ? a.anio + '°' : ''} ${a.division || ''}</div>
-      ${resultados?.length ? `
+      ${filasUnificadas.length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Materia</th><th>Examen</th><th style="text-align:center">Nota</th><th>Estado</th><th>Fecha</th></tr></thead>
+            <thead><tr><th>Materia</th><th>Instancia</th><th style="text-align:center">Nota</th><th>Estado</th><th>Fecha</th></tr></thead>
             <tbody>${filas}</tbody>
           </table>
-        </div>` : '<div class="empty-state"><div class="icon">📝</div><p>Sin exámenes rendidos todavía.</p></div>'}`;
+        </div>` : '<div class="empty-state"><div class="icon">📝</div><p>Sin calificaciones cargadas todavía.</p></div>'}`;
 
-    this._resultadosActuales = resultados || [];
+    this._resultadosActuales = filasUnificadas;
+  },
+
+  // Junta exam_results (exámenes de la app) + manual_grades (parciales en papel,
+  // conceptos) en un mismo formato de fila, para mostrar y exportar todo junto.
+  _unificarNotas(resultados, manuales) {
+    const deExamenes = resultados.map(r => {
+      const finalScore = r.professor_score ?? r.score;
+      const grade = Math.round(finalScore / 10 * 10) / 10;
+      return {
+        materia: r.exams?.subjects?.name || '—',
+        titulo: r.exams?.title || '—',
+        origen: 'Examen (app)',
+        notaTexto: String(grade),
+        notaNumerica: grade,
+        color: grade >= 6 ? 'var(--success)' : 'var(--danger)',
+        estado: r.status,
+        estadoBadge: r.status === 'confirmed'
+          ? '<span class="badge badge-active">Confirmado</span>'
+          : '<span class="badge badge-practice">⏳ Pendiente</span>',
+        fecha: r.submitted_at,
+      };
+    });
+
+    const deManuales = manuales
+      .filter(n => n.score !== null || n.concepto !== null)
+      .map(n => {
+        const item = n.manual_grade_items;
+        const esNumerica = item?.tipo === 'numerica';
+        return {
+          materia: item?.subjects?.name || '—',
+          titulo: item?.title || '—',
+          origen: 'Manual',
+          notaTexto: esNumerica ? String(n.score) : (n.concepto || '—'),
+          notaNumerica: esNumerica ? Number(n.score) : null,
+          color: esNumerica ? (Number(n.score) >= 6 ? 'var(--success)' : 'var(--danger)') : 'var(--text-1)',
+          estado: 'confirmed',
+          estadoBadge: '<span class="badge badge-indigo">Manual</span>',
+          fecha: item?.fecha ? item.fecha + 'T00:00:00' : n.updated_at,
+        };
+      });
+
+    return [...deExamenes, ...deManuales].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
   },
 
   descargarAlumno() {
     if (!this._alumnoActual) return;
     const a = this._alumnoActual;
-    const filas = (this._resultadosActuales || []).map(r => {
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
-      return [Utils.nombrePlanilla(a), a.dni, r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
-    });
-    Utils.descargarCsv(`notas_${a.dni}.csv`, ['Alumno', 'DNI', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
+    const filas = (this._resultadosActuales || []).map(f =>
+      [Utils.nombrePlanilla(a), a.dni, f.materia, f.titulo, f.origen, f.notaTexto, f.estado, f.fecha || '']);
+    Utils.descargarCsv(`notas_${a.dni}.csv`, ['Alumno', 'DNI', 'Materia', 'Instancia', 'Origen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
   // ── Exportaciones masivas (respetan los filtros de año/división/búsqueda) ──
@@ -189,17 +227,25 @@ const PreceptorNotas = {
       .in('student_id', alumnoIds)
       .neq('status', 'in_progress');
 
-    if (!resultados?.length) { Utils.toast('No hay notas cargadas para este filtro', 'error'); return; }
+    const { data: manuales } = await sb
+      .from('manual_grades')
+      .select('*, manual_grade_items(title, fecha, tipo, subjects(name))')
+      .in('student_id', alumnoIds);
 
-    const filas = resultados.map(r => {
-      const a = alumnoPorId[r.student_id];
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
+    const unificadas = alumnoIds.flatMap(id => this._unificarNotas(
+      (resultados || []).filter(r => r.student_id === id),
+      (manuales || []).filter(n => n.student_id === id),
+    ).map(f => ({ ...f, studentId: id })));
+
+    if (!unificadas.length) { Utils.toast('No hay notas cargadas para este filtro', 'error'); return; }
+
+    const filas = unificadas.map(f => {
+      const a = alumnoPorId[f.studentId];
       const curso = a?.anio ? `${a.anio}°${a.division ? ' ' + a.division : ''}` : '';
-      return [Utils.nombrePlanilla(a), a?.dni || '', curso, r.exams?.subjects?.name || '', r.exams?.title || '', grade, r.status, r.submitted_at || ''];
+      return [Utils.nombrePlanilla(a), a?.dni || '', curso, f.materia, f.titulo, f.origen, f.notaTexto, f.estado, f.fecha || ''];
     });
 
-    Utils.descargarCsv('calificaciones.csv', ['Alumno', 'DNI', 'Curso', 'Materia', 'Examen', 'Nota', 'Estado', 'Fecha'], filas);
+    Utils.descargarCsv('calificaciones.csv', ['Alumno', 'DNI', 'Curso', 'Materia', 'Instancia', 'Origen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
   _numeroALetras(n) {
@@ -225,15 +271,24 @@ const PreceptorNotas = {
       .in('student_id', alumnoIds)
       .eq('status', 'confirmed');
 
-    if (!resultados?.length) { Utils.toast('No hay notas confirmadas todavía para este filtro', 'error'); return; }
+    const { data: manuales } = await sb
+      .from('manual_grades')
+      .select('*, manual_grade_items(title, fecha, tipo, subjects(name))')
+      .in('student_id', alumnoIds);
+
+    const unificadas = alumnoIds.flatMap(id => this._unificarNotas(
+      (resultados || []).filter(r => r.student_id === id),
+      (manuales || []).filter(n => n.student_id === id),
+    ).map(f => ({ ...f, studentId: id })));
+
+    if (!unificadas.length) { Utils.toast('No hay notas confirmadas todavía para este filtro', 'error'); return; }
 
     const session = Auth.session();
     const { data: inst } = await sb.from('institutions').select('name').eq('id', session.inst).single();
 
     const porMateria = {};
-    resultados.forEach(r => {
-      const materia = r.exams?.subjects?.name || 'Sin materia';
-      (porMateria[materia] = porMateria[materia] || []).push(r);
+    unificadas.forEach(f => {
+      (porMateria[f.materia] = porMateria[f.materia] || []).push(f);
     });
 
     const filtroTxt = [
@@ -243,26 +298,25 @@ const PreceptorNotas = {
 
     const seccionesHtml = Object.entries(porMateria).sort(([a], [b]) => a.localeCompare(b)).map(([materia, filas]) => {
       const ordenadas = [...filas].sort((a, b) =>
-        Utils.nombrePlanilla(alumnoPorId[a.student_id]).localeCompare(Utils.nombrePlanilla(alumnoPorId[b.student_id])));
+        Utils.nombrePlanilla(alumnoPorId[a.studentId]).localeCompare(Utils.nombrePlanilla(alumnoPorId[b.studentId])));
 
-      const rowsHtml = ordenadas.map((r, i) => {
-        const finalScore = r.professor_score ?? r.score;
-        const grade = Math.round(finalScore / 10 * 10) / 10;
-        const a = alumnoPorId[r.student_id];
+      const rowsHtml = ordenadas.map((f, i) => {
+        const a = alumnoPorId[f.studentId];
+        const letras = f.notaNumerica !== null ? this._numeroALetras(f.notaNumerica) : f.notaTexto;
         return `<tr>
           <td>${i + 1}</td>
           <td>${Utils.nombrePlanilla(a)}</td>
           <td>${a?.dni || ''}</td>
-          <td>${r.exams?.title || ''}</td>
-          <td style="text-align:center">${grade}</td>
-          <td>${this._numeroALetras(grade)}</td>
+          <td>${f.titulo} <span style="color:#888;font-size:.75em">(${f.origen})</span></td>
+          <td style="text-align:center">${f.notaTexto}</td>
+          <td>${letras}</td>
         </tr>`;
       }).join('');
 
       return `
         <h3 style="margin:22px 0 6px;font-size:.95rem">${materia}</h3>
         <table>
-          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Examen</th><th>Nota</th><th>Nota en letras</th></tr></thead>
+          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Instancia</th><th>Nota</th><th>Nota en letras</th></tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>`;
     }).join('');

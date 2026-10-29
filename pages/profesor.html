@@ -69,6 +69,7 @@
       <div class="tab" data-tab="alumnos"   onclick="showTab('alumnos')">Alumnos</div>
       <div class="tab" data-tab="asistencia" onclick="showTab('asistencia')">Asistencia</div>
       <div class="tab" data-tab="examenes"  onclick="showTab('examenes')">Exámenes</div>
+      <div class="tab" data-tab="calificaciones" onclick="showTab('calificaciones')">Calificaciones</div>
       <div class="tab" data-tab="trabajos"  onclick="showTab('trabajos')">Trabajos Prácticos</div>
       <div class="tab" data-tab="biblioteca" onclick="showTab('biblioteca')">Biblioteca</div>
       <div class="tab" data-tab="proyectos" onclick="showTab('proyectos')">Proyectos</div>
@@ -98,6 +99,10 @@
 
     <div class="page" id="page-examenes">
       <div id="examenes-content"></div>
+    </div>
+
+    <div class="page" id="page-calificaciones">
+      <div id="calificaciones-content"></div>
     </div>
 
     <div class="page" id="page-trabajos">
@@ -378,6 +383,33 @@
   </div>
 </div>
 
+<!-- Modal: Nueva/editar instancia de calificación manual -->
+<div class="modal-backdrop hidden" id="calif-modal">
+  <div class="modal">
+    <h4 id="califmod-title">Nueva instancia de calificación</h4>
+    <input type="hidden" id="califmod-id">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input type="text" id="califmod-nombre" placeholder="Ej: Parcial 1 (papel), Concepto 1er cuatrimestre">
+    </div>
+    <div class="form-group">
+      <label>Tipo de nota</label>
+      <select id="califmod-tipo">
+        <option value="numerica">Numérica (0 a 10)</option>
+        <option value="conceptual">Conceptual (Muy Bueno / Bueno / Regular / Insuficiente)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Fecha (opcional)</label>
+      <input type="date" id="califmod-fecha">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="ProfesorCalificaciones.cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" id="califmod-save" onclick="ProfesorCalificaciones.guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Preguntas del examen -->
 <div class="modal-backdrop hidden" id="exam-pregs-modal">
   <div class="modal" style="max-width:640px">
@@ -653,6 +685,7 @@
 <script src="../js/profesor/asistencia.js"></script>
 <script src="../js/profesor/novedades.js"></script>
 <script src="../js/profesor/examenes.js"></script>
+<script src="../js/profesor/calificaciones.js"></script>
 <script src="../js/profesor/trabajos.js"></script>
 <script src="../js/proyectos.js"></script>
 <script src="../js/profesor/biblioteca.js"></script>
@@ -696,6 +729,7 @@
       alumnos:       ProfesorAlumnos,
       asistencia:    ProfesorAsistencia,
       examenes:      ProfesorExamenes,
+      calificaciones: ProfesorCalificaciones,
       trabajos:      ProfesorTrabajos,
       biblioteca:    ProfesorBiblioteca,
       proyectos:     ProfesorProyectos,
