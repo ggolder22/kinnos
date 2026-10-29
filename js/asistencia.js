@@ -21,13 +21,21 @@ const Asistencia = {
 
   DIAS: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 
-  // Devuelve { reason } si ese día está cerrado para toda la institución
-  // (feriado o suspensión de clases cargada por un preceptor), o null si es un día normal.
-  async diaSinClases(institutionId, fechaStr) {
+  // Devuelve { reason } si ese día está cerrado para esta materia (feriado o
+  // suspensión cargada por un preceptor), o null si es un día normal. Una
+  // declaración "toda la institución" (anio y division en NULL) afecta a
+  // cualquier materia; una declaración acotada a un año/división solo afecta
+  // a las materias de ESE año/división — materiaAnio/materiaDivision son los
+  // de la propia materia, no del alumno (una materia es de un solo curso).
+  async diaSinClases(institutionId, fechaStr, materiaAnio = null, materiaDivision = null) {
     if (!institutionId) return null;
-    const { data } = await sb.from('no_class_days').select('reason')
-      .eq('institution_id', institutionId).eq('day_date', fechaStr).maybeSingle();
-    return data || null;
+    const { data } = await sb.from('no_class_days').select('reason, anio, division')
+      .eq('institution_id', institutionId).eq('day_date', fechaStr);
+    const match = (data || []).find(r =>
+      (r.anio === null || r.anio === materiaAnio) &&
+      (r.division === null || r.division === materiaDivision)
+    );
+    return match ? { reason: match.reason } : null;
   },
 
   // Trae los horarios de una materia desde el cronograma. Cada materia es de una

@@ -13,7 +13,7 @@ const AlumnoAsistencia = {
     const hoy = Utils.hoyLocal();
 
     const institutionId = AlumnoState.materia?.careers?.institutions?.id || null;
-    this._diaCerrado = await Asistencia.diaSinClases(institutionId, hoy);
+    this._diaCerrado = await Asistencia.diaSinClases(institutionId, hoy, AlumnoState.materia?.year ?? null, AlumnoState.materia?.division ?? null);
 
     const despliegue = AlumnoState.materia?.despliegue;
     this._fueraDeCuatrimestre = false;

@@ -62,7 +62,7 @@ const ProfesorAsistencia = {
     const hoy = Utils.hoyLocal();
 
     const institutionId = ProfesorState.materia?.careers?.institutions?.id || null;
-    const diaCerrado = await Asistencia.diaSinClases(institutionId, hoy);
+    const diaCerrado = await Asistencia.diaSinClases(institutionId, hoy, ProfesorState.materia?.year ?? null, ProfesorState.materia?.division ?? null);
     if (diaCerrado) {
       el.innerHTML = `<div class="page-header"><h3>Asistencia</h3></div>${this._tabsHtml()}
         <div class="card" style="border-color:#f59e0b">
@@ -228,7 +228,7 @@ const ProfesorAsistencia = {
 
       // Si ese día estaba declarado sin clases, no se completa como "ausente" —
       // lo resuelve la justificación masiva de Preceptoría.
-      const diaCerrado = await Asistencia.diaSinClases(institutionId, s.session_date);
+      const diaCerrado = await Asistencia.diaSinClases(institutionId, s.session_date, ProfesorState.materia?.year ?? null, ProfesorState.materia?.division ?? null);
       if (diaCerrado) continue;
 
       const { data: existentes } = await sb.from('attendance_records').select('student_id').eq('session_id', s.id);
