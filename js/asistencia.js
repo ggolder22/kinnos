@@ -29,9 +29,24 @@ const Asistencia = {
   // de la propia materia, no del alumno (una materia es de un solo curso).
   async diaSinClases(institutionId, fechaStr, materiaAnio = null, materiaDivision = null) {
     if (!institutionId) return null;
-    const { data } = await sb.from('no_class_days').select('reason, anio, division')
+    const { data } = await sb.from('no_class_days').select('reason, anio, division, day_date')
       .eq('institution_id', institutionId).eq('day_date', fechaStr);
-    const match = (data || []).find(r =>
+    return this._matchDiaSinClases(data || [], materiaAnio, materiaDivision);
+  },
+
+  // Trae TODOS los días sin clase de una institución en una sola consulta —
+  // para revisar muchas fechas (ej. el historial completo de una materia)
+  // sin hacer una consulta por fecha. Se usa junto con _matchDiaSinClases.
+  async diasSinClasesDeInstitucion(institutionId) {
+    if (!institutionId) return [];
+    const { data } = await sb.from('no_class_days').select('reason, anio, division, day_date')
+      .eq('institution_id', institutionId);
+    return data || [];
+  },
+
+  _matchDiaSinClases(dias, materiaAnio, materiaDivision, fechaStr = null) {
+    const match = dias.find(r =>
+      (fechaStr === null || r.day_date === fechaStr) &&
       (r.anio === null || r.anio === materiaAnio) &&
       (r.division === null || r.division === materiaDivision)
     );

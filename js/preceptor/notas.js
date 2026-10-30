@@ -197,8 +197,7 @@ const PreceptorNotas = {
   // conceptos) en un mismo formato de fila, para mostrar y exportar todo junto.
   _unificarNotas(resultados, manuales) {
     const deExamenes = resultados.map(r => {
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
+      const { score: grade } = Utils.notaFinal(r);
       return {
         materia: r.exams?.subjects?.name || '—',
         titulo: r.exams?.title || '—',
@@ -280,15 +279,6 @@ const PreceptorNotas = {
     Utils.descargarCsv('calificaciones.csv', ['Alumno', 'DNI', 'Curso', 'Materia', 'Instancia', 'Origen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
-  _numeroALetras(n) {
-    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
-    const entero  = Math.floor(n);
-    const decimal = Math.round((n - entero) * 10);
-    const base = PALABRAS[entero] ?? String(entero);
-    if (!decimal) return base;
-    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
-  },
-
   async descargarActaPDF() {
     const alumnos = await this._alumnosFiltradosDB();
     if (!alumnos.length) { Utils.toast('No hay alumnos para este filtro', 'error'); return; }
@@ -334,7 +324,7 @@ const PreceptorNotas = {
 
       const rowsHtml = ordenadas.map((f, i) => {
         const a = alumnoPorId[f.studentId];
-        const letras = f.notaNumerica !== null ? this._numeroALetras(f.notaNumerica) : f.notaTexto;
+        const letras = f.notaNumerica !== null ? Utils.numeroALetras(f.notaNumerica) : f.notaTexto;
         return `<tr>
           <td>${i + 1}</td>
           <td>${Utils.nombrePlanilla(a)}</td>

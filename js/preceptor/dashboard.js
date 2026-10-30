@@ -438,10 +438,13 @@ const PreceptorDashboard = {
       </div>`;
   },
 
-  _listaPendientes() {
+  // alumnos: lista de alumnos donde buscar los datos a mostrar — por defecto la
+  // propia del Dashboard, pero otras pantallas (ej. PreceptorAlumnos) pueden
+  // pasar la suya para no depender de que el Dashboard se haya cargado antes.
+  _listaPendientes(alumnos = this._alumnos) {
     if (!this._pendientes.length) return '';
     const alumnoPorId = {};
-    this._alumnos.forEach(a => { alumnoPorId[a.id] = a; });
+    alumnos.forEach(a => { alumnoPorId[a.id] = a; });
 
     const cards = this._pendientes.map(p => {
       const a = alumnoPorId[p.studentId];

@@ -76,6 +76,25 @@ const Utils = {
     URL.revokeObjectURL(url);
   },
 
+  // Nota final de un resultado de examen: la corrección del profesor manda si
+  // existe, si no se usa la nota automática. Redondeada a un decimal sobre /10
+  // (score/professor_score se guardan en escala 0-100).
+  notaFinal(resultado) {
+    const raw = resultado.professor_score ?? resultado.score;
+    const score = Math.round(raw / 10 * 10) / 10;
+    return { score, label: `${score}/10` };
+  },
+
+  // Convierte una nota 0-10 a palabras ("Siete con cinco"), para actas impresas.
+  numeroALetras(n) {
+    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
+    const entero  = Math.floor(n);
+    const decimal = Math.round((n - entero) * 10);
+    const base = PALABRAS[entero] ?? String(entero);
+    if (!decimal) return base;
+    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
+  },
+
   // Renderiza <option> en un <select>
   fillSelect(selectId, items, valueKey, labelKey, placeholderText) {
     const sel = document.getElementById(selectId);

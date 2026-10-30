@@ -434,8 +434,7 @@ const ProfesorExamenes = {
 
     const rows = resultados.map(r => {
       const nombre     = Utils.nombrePlanilla(r.students) || 'Alumno';
-      const finalScore = r.professor_score ?? r.score;
-      const grade      = Math.round(finalScore / 10 * 10) / 10;
+      const { score: grade } = Utils.notaFinal(r);
       const color      = grade >= 6 ? 'var(--success)' : 'var(--danger)';
 
       const statusBadge = r.status === 'confirmed'
@@ -467,8 +466,7 @@ const ProfesorExamenes = {
     if (!resultados.length) { Utils.toast('No hay resultados para exportar', 'error'); return; }
 
     const filas = resultados.map(r => {
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
+      const { score: grade } = Utils.notaFinal(r);
       return [
         Utils.nombrePlanilla(r.students), grade,
         r.status === 'confirmed' ? 'Confirmado' : 'Pendiente', Utils.formatDate(r.submitted_at),
@@ -480,15 +478,6 @@ const ProfesorExamenes = {
       ['Alumno', 'Nota (/10)', 'Estado', 'Entregado'],
       filas
     );
-  },
-
-  _numeroALetras(n) {
-    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
-    const entero  = Math.floor(n);
-    const decimal = Math.round((n - entero) * 10);
-    const base = PALABRAS[entero] ?? String(entero);
-    if (!decimal) return base;
-    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
   },
 
   exportarResultadosPDF() {
@@ -511,16 +500,15 @@ const ProfesorExamenes = {
     const anioDiv = [m.year ? `${m.year}° año` : null, m.division ? `División ${m.division}` : null].filter(Boolean).join(' · ');
 
     const filas = [...confirmados].sort((a, b) => Utils.nombrePlanilla(a.students).localeCompare(Utils.nombrePlanilla(b.students)));
-    const aprobados = filas.filter(r => ((r.professor_score ?? r.score) / 10) >= 6).length;
+    const aprobados = filas.filter(r => Utils.notaFinal(r).score >= 6).length;
 
     const rowsHtml = filas.map((r, i) => {
-      const finalScore = r.professor_score ?? r.score;
-      const grade = Math.round(finalScore / 10 * 10) / 10;
+      const { score: grade } = Utils.notaFinal(r);
       return `<tr>
         <td>${i + 1}</td>
         <td>${Utils.nombrePlanilla(r.students)}</td>
         <td style="text-align:center">${grade}</td>
-        <td>${this._numeroALetras(grade)}</td>
+        <td>${Utils.numeroALetras(grade)}</td>
       </tr>`;
     }).join('');
 

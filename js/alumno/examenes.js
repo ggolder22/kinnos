@@ -67,9 +67,8 @@ const AlumnoExamenes = {
           <div style="font-size:.72rem;color:var(--text-3);margin-top:2px">El docente está corrigiendo</div>
         </div>`;
       } else if (resultado.status === 'confirmed') {
-        const finalScore = resultado.professor_score ?? resultado.score;
-        const grade      = Math.round(finalScore / 10 * 10) / 10;
-        const color      = grade >= 6 ? 'var(--success)' : 'var(--danger)';
+        const { score: grade } = Utils.notaFinal(resultado);
+        const color = grade >= 6 ? 'var(--success)' : 'var(--danger)';
         accionHtml = `<div style="text-align:right">
           <div style="font-size:1.4rem;font-weight:700;color:${color}">${grade}<span style="font-size:.8rem;font-weight:400">/10</span></div>
           <button class="btn btn-ghost btn-sm" style="font-size:.72rem;margin-top:4px"
@@ -344,9 +343,8 @@ const AlumnoExamenes = {
 
     document.getElementById('exam-overlay-titulo').textContent = resultado.exams?.title || 'Examen';
 
-    const finalScore = resultado.professor_score ?? resultado.score;
-    const grade      = Math.round(finalScore / 10 * 10) / 10;
-    const color      = grade >= 6 ? 'var(--success)' : 'var(--danger)';
+    const { score: grade } = Utils.notaFinal(resultado);
+    const color = grade >= 6 ? 'var(--success)' : 'var(--danger)';
     const answers    = resultado.answers || {};
     const adj        = resultado.professor_adjustments || {};
 

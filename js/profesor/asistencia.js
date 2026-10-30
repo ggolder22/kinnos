@@ -221,24 +221,36 @@ const ProfesorAsistencia = {
     if (!sesiones?.length) return;
 
     const institutionId = ProfesorState.materia?.careers?.institutions?.id || null;
+    const materiaAnio = ProfesorState.materia?.year ?? null;
+    const materiaDivision = ProfesorState.materia?.division ?? null;
     const ahora = new Date();
+
+    // Una sola consulta para todos los días sin clase y para todos los registros
+    // ya existentes de estas sesiones, en vez de una consulta por sesión.
+    const [diasSinClase, { data: existentes }] = await Promise.all([
+      Asistencia.diasSinClasesDeInstitucion(institutionId),
+      sb.from('attendance_records').select('session_id, student_id').in('session_id', sesiones.map(s => s.id)),
+    ]);
+    const yaTienenPorSesion = {};
+    (existentes || []).forEach(r => { (yaTienenPorSesion[r.session_id] = yaTienenPorSesion[r.session_id] || new Set()).add(r.student_id); });
+
+    const nuevosRegistros = [];
     for (const s of sesiones) {
       const ventana = Asistencia.ventanaDeFecha(s.session_date, this._horarios);
       if (!ventana || ahora <= ventana.end) continue;
 
       // Si ese día estaba declarado sin clases, no se completa como "ausente" —
       // lo resuelve la justificación masiva de Preceptoría.
-      const diaCerrado = await Asistencia.diaSinClases(institutionId, s.session_date, ProfesorState.materia?.year ?? null, ProfesorState.materia?.division ?? null);
+      const diaCerrado = Asistencia._matchDiaSinClases(diasSinClase, materiaAnio, materiaDivision, s.session_date);
       if (diaCerrado) continue;
 
-      const { data: existentes } = await sb.from('attendance_records').select('student_id').eq('session_id', s.id);
-      const yaTienen = new Set((existentes || []).map(r => r.student_id));
+      const yaTienen = yaTienenPorSesion[s.id] || new Set();
       const faltantes = rosterIds.filter(id => !yaTienen.has(id));
-      if (!faltantes.length) continue;
+      faltantes.forEach(student_id => nuevosRegistros.push({ session_id: s.id, student_id, status: 'ausente', marked_by_role: 'system', marked_by: null }));
+    }
 
-      await sb.from('attendance_records').insert(
-        faltantes.map(student_id => ({ session_id: s.id, student_id, status: 'ausente', marked_by_role: 'system', marked_by: null }))
-      );
+    if (nuevosRegistros.length) {
+      await sb.from('attendance_records').insert(nuevosRegistros);
     }
   },
 

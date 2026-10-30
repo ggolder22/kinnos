@@ -44,17 +44,14 @@ const AlumnoCalificaciones = {
     }
 
     const filas = [
-      ...resultados.map(r => {
-        const finalScore = r.professor_score ?? r.score;
-        return {
-          tipo: 'Examen (app)',
-          titulo: examPorId[r.exam_id]?.title || '—',
-          nota: `${Math.round(finalScore / 10 * 10) / 10}/10`,
-          fecha: r.confirmed_at,
-          obs: r.professor_notes || '',
-          verExamen: r.id,
-        };
-      }),
+      ...resultados.map(r => ({
+        tipo: 'Examen (app)',
+        titulo: examPorId[r.exam_id]?.title || '—',
+        nota: `${Utils.notaFinal(r).score}/10`,
+        fecha: r.confirmed_at,
+        obs: r.professor_notes || '',
+        verExamen: r.id,
+      })),
       ...notasManuales.map(n => {
         const item = itemPorId[n.item_id];
         return {

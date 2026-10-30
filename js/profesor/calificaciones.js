@@ -318,15 +318,6 @@ const ProfesorCalificaciones = {
     Utils.descargarCsv(`${item.title.replace(/[^a-z0-9]+/gi, '_')}.csv`, ['Alumno', 'DNI', 'Nota', 'Observaciones'], filas);
   },
 
-  _numeroALetras(n) {
-    const PALABRAS = ['Cero', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
-    const entero  = Math.floor(n);
-    const decimal = Math.round((n - entero) * 10);
-    const base = PALABRAS[entero] ?? String(entero);
-    if (!decimal) return base;
-    return `${base} con ${(PALABRAS[decimal] ?? String(decimal)).toLowerCase()}`;
-  },
-
   _generarActaPDF(item, roster, notas) {
     const conNota = roster.filter(a => notas[a.id]);
     if (!conNota.length) { Utils.toast('Todavía no hay ninguna nota cargada en esta instancia', 'error'); return; }
@@ -340,7 +331,7 @@ const ProfesorCalificaciones = {
       const n = notas[a.id];
       const esNumerica = n.score !== null;
       const notaTexto = esNumerica ? n.score : (n.concepto || '—');
-      const notaLetras = esNumerica ? this._numeroALetras(n.score) : (n.concepto || '—');
+      const notaLetras = esNumerica ? Utils.numeroALetras(n.score) : (n.concepto || '—');
       return `<tr>
         <td>${i + 1}</td>
         <td>${Utils.nombrePlanilla(a)}</td>
