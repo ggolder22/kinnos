@@ -218,15 +218,7 @@ const ProfesorTrabajos = {
 
     const filterBar = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <select onchange="ProfesorTrabajos.filtrarEntregas('anio', this.value)" style="width:auto;padding:5px 10px">
-          <option value="">Todos los años</option>
-          ${[1, 2, 3, 4].map(y => `<option value="${y}" ${this._filtroAnio === String(y) ? 'selected' : ''}>${y}°</option>`).join('')}
-        </select>
-        <select onchange="ProfesorTrabajos.filtrarEntregas('division', this.value)" style="width:auto;padding:5px 10px">
-          <option value="">Ambas divisiones</option>
-          <option value="A" ${this._filtroDivision === 'A' ? 'selected' : ''}>División A</option>
-          <option value="B" ${this._filtroDivision === 'B' ? 'selected' : ''}>División B</option>
-        </select>
+        ${Utils.selectsAnioDivision('ProfesorTrabajos.filtrarEntregas', this._filtroAnio, this._filtroDivision)}
         <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="ProfesorTrabajos.exportarEntregas()">⬇ Exportar (CSV)</button>
       </div>`;
 

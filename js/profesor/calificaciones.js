@@ -341,48 +341,21 @@ const ProfesorCalificaciones = {
       </tr>`;
     }).join('');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><title>Acta — ${item.title}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 36px; color: #111; }
-        .header { text-align: center; margin-bottom: 18px; }
-        .header h1 { font-size: 1.15rem; margin-bottom: 2px; }
-        .header p { font-size: .85rem; color: #444; margin: 1px 0; }
-        .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .85rem;
-          margin: 18px 0 10px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 8px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #999; padding: 6px 10px; font-size: .85rem; text-align: left; }
-        th { background: #eee; }
-        .resumen { margin-top: 14px; font-size: .82rem; }
-        .firmas { display: flex; justify-content: center; margin-top: 90px; }
-        .firma { width: 260px; text-align: center; font-size: .82rem; }
-        .firma .linea { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; }
-      </style></head><body>
-        <div class="header">
-          <h1>${institucion || 'Institución'}</h1>
-          ${carrera ? `<p>${carrera}</p>` : ''}
-          <p>Acta de calificaciones${anioDiv ? ' — ' + anioDiv : ''}</p>
-        </div>
-
-        <div class="meta">
-          <span>Materia: <strong>${m.name || ''}</strong></span>
-          <span>Instancia: <strong>${item.title}</strong></span>
-          <span>Fecha: ${item.fecha ? Utils.formatDate(item.fecha) : Utils.formatDate(Utils.hoyLocal())}</span>
-        </div>
-
-        <table>
-          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Nota</th><th>Nota en letras</th></tr></thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-
-        <div class="resumen">${conNota.length} alumno${conNota.length !== 1 ? 's' : ''} con nota cargada de ${roster.length} inscriptos.</div>
-
-        <div class="firmas">
-          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Docente</div>
-        </div>
-      </body></html>`);
-    win.document.close();
-    win.print();
+    Utils.imprimirActa({
+      titulo: `Acta — ${item.title}`,
+      institucion,
+      lineasHeader: [carrera, `Acta de calificaciones${anioDiv ? ' — ' + anioDiv : ''}`].filter(Boolean),
+      meta: `<div class="meta-flex">
+        <span>Materia: <strong>${m.name || ''}</strong></span>
+        <span>Instancia: <strong>${item.title}</strong></span>
+        <span>Fecha: ${item.fecha ? Utils.formatDate(item.fecha) : Utils.formatDate(Utils.hoyLocal())}</span>
+      </div>`,
+      bodyHtml: `<table>
+        <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Nota</th><th>Nota en letras</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`,
+      resumen: `${conNota.length} alumno${conNota.length !== 1 ? 's' : ''} con nota cargada de ${roster.length} inscriptos.`,
+      firmas: ['Firma y aclaración — Docente'],
+    });
   },
 };

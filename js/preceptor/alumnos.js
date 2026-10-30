@@ -44,15 +44,7 @@ const PreceptorAlumnos = {
     const filterBar = `
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
         <label style="font-size:.78rem;color:var(--text-3)">Filtrar:</label>
-        <select onchange="PreceptorAlumnos.filtrar('anio', this.value)" style="width:auto;padding:5px 10px">
-          <option value="">Todos los años</option>
-          ${[1, 2, 3, 4].map(y => `<option value="${y}" ${this._filtroAnio === String(y) ? 'selected' : ''}>${y}°</option>`).join('')}
-        </select>
-        <select onchange="PreceptorAlumnos.filtrar('division', this.value)" style="width:auto;padding:5px 10px">
-          <option value="">Ambas divisiones</option>
-          <option value="A" ${this._filtroDivision === 'A' ? 'selected' : ''}>División A</option>
-          <option value="B" ${this._filtroDivision === 'B' ? 'selected' : ''}>División B</option>
-        </select>
+        ${Utils.selectsAnioDivision('PreceptorAlumnos.filtrar', this._filtroAnio, this._filtroDivision)}
         <span style="font-size:.78rem;color:var(--text-3)">${data.length} de ${this._todos.length} alumnos</span>
         <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="PreceptorAlumnos.imprimir()">🖨 Armar lista / imprimir</button>
       </div>`;

@@ -343,33 +343,13 @@ const PreceptorNotas = {
         </table>`;
     }).join('');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><title>Calificaciones — ${inst?.name || 'Institución'}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 36px; color: #111; }
-        .header { text-align: center; margin-bottom: 18px; }
-        .header h1 { font-size: 1.15rem; margin-bottom: 2px; }
-        .header p { font-size: .85rem; color: #444; margin: 1px 0; }
-        .meta { text-align: center; font-size: .85rem; margin: 14px 0 6px; border-top: 1px solid #999; border-bottom: 1px solid #999; padding: 8px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-        th, td { border: 1px solid #999; padding: 5px 8px; font-size: .8rem; text-align: left; }
-        th { background: #eee; }
-        .firmas { display: flex; justify-content: center; margin-top: 70px; }
-        .firma { width: 260px; text-align: center; font-size: .82rem; }
-        .firma .linea { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; }
-      </style></head><body>
-        <div class="header">
-          <h1>${inst?.name || 'Institución'}</h1>
-          <p>Informe de calificaciones</p>
-        </div>
-        <div class="meta">${filtroTxt} · Emitido: ${Utils.formatDate(Utils.hoyLocal())}</div>
-        ${seccionesHtml}
-        <div class="firmas">
-          <div class="firma"><div class="linea">&nbsp;</div>Firma y aclaración — Preceptoría</div>
-        </div>
-      </body></html>`);
-    win.document.close();
-    win.print();
+    Utils.imprimirActa({
+      titulo: `Calificaciones — ${inst?.name || 'Institución'}`,
+      institucion: inst?.name,
+      lineasHeader: ['Informe de calificaciones'],
+      meta: `<div style="text-align:center">${filtroTxt} · Emitido: ${Utils.formatDate(Utils.hoyLocal())}</div>`,
+      bodyHtml: seccionesHtml,
+      firmas: ['Firma y aclaración — Preceptoría'],
+    });
   },
 };
