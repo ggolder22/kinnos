@@ -15,7 +15,7 @@ const PreceptorNotas = {
       <div class="page-header"><h3>Calificaciones</h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarTodo()">⬇ Excel (CSV)</button>
-          <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarActaPDF()">📄 Acta (PDF)</button>
+          <button class="btn btn-ghost btn-sm" onclick="PreceptorNotas.descargarActaPDF()">📄 Actas / Condición</button>
         </div>
       </div>
       <div class="card" style="margin-bottom:16px">
@@ -279,77 +279,77 @@ const PreceptorNotas = {
     Utils.descargarCsv('calificaciones.csv', ['Alumno', 'DNI', 'Curso', 'Materia', 'Instancia', 'Origen', 'Nota', 'Estado', 'Fecha'], filas);
   },
 
+  // Actas oficiales (formato modelo_actas): el preceptor elige materia y
+  // documento (acta de una instancia, o listado de condición académica).
+  // Las materias se acotan por el filtro de año/división de la pantalla.
   async descargarActaPDF() {
-    const alumnos = await this._alumnosFiltradosDB();
-    if (!alumnos.length) { Utils.toast('No hay alumnos para este filtro', 'error'); return; }
-
-    const alumnoPorId = {};
-    alumnos.forEach(a => { alumnoPorId[a.id] = a; });
-    const alumnoIds = alumnos.map(a => a.id);
-
-    const { data: resultados } = await sb
-      .from('exam_results')
-      .select('*, exams(title, subjects(name))')
-      .in('student_id', alumnoIds)
-      .eq('status', 'confirmed');
-
-    const { data: manuales } = await sb
-      .from('manual_grades')
-      .select('*, manual_grade_items(title, fecha, tipo, subjects(name))')
-      .in('student_id', alumnoIds);
-
-    const unificadas = alumnoIds.flatMap(id => this._unificarNotas(
-      (resultados || []).filter(r => r.student_id === id),
-      (manuales || []).filter(n => n.student_id === id),
-    ).map(f => ({ ...f, studentId: id })));
-
-    if (!unificadas.length) { Utils.toast('No hay notas confirmadas todavía para este filtro', 'error'); return; }
-
     const session = Auth.session();
-    const { data: inst } = await sb.from('institutions').select('name').eq('id', session.inst).single();
+    let q = sb.from('subjects').select('id, name, year, division, careers!inner(institution_id)')
+      .eq('careers.institution_id', session.inst);
+    if (this._filtroAnio)     q = q.eq('year', parseInt(this._filtroAnio));
+    if (this._filtroDivision) q = q.or(`division.eq.${this._filtroDivision},division.is.null`);
+    const { data: materias, error } = await q;
+    if (error) { Utils.toast('Error al cargar materias: ' + error.message, 'error'); return; }
+    if (!materias?.length) { Utils.toast('No hay materias para este año/división', 'error'); return; }
 
-    const porMateria = {};
-    unificadas.forEach(f => {
-      (porMateria[f.materia] = porMateria[f.materia] || []).push(f);
+    materias.sort((a, b) => (a.year || 0) - (b.year || 0) || a.name.localeCompare(b.name));
+    const esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+    Actas.elegir({
+      titulo: 'Actas y condición académica',
+      extraHtml: `
+        <div class="form-group">
+          <label>Materia</label>
+          <select id="acta-prec-materia" onchange="PreceptorNotas._actaCargarInstancias()">
+            ${materias.map(m => `<option value="${m.id}">${m.year ? m.year + '° ' : ''}${m.division ? m.division + ' — ' : ''}${esc(m.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Documento</label>
+          <select id="acta-prec-doc" onchange="PreceptorNotas._actaCargarInstancias()">
+            <option value="acta">Acta de examen</option>
+            <option value="condicion">Listado de condición académica</option>
+          </select>
+        </div>
+        <div class="form-group" id="acta-prec-inst-wrap">
+          <label>Instancia (examen / calificación)</label>
+          <select id="acta-prec-inst"><option value="">Cargando…</option></select>
+        </div>`,
+      onDescargar: (formato, filtro, win) => {
+        const subjectId = document.getElementById('acta-prec-materia').value;
+        if (document.getElementById('acta-prec-doc').value === 'condicion') {
+          return Actas.descargarCondicion({ subjectId, filtro, formato, win });
+        }
+        const inst = document.getElementById('acta-prec-inst').value;
+        if (!inst) { Utils.toast('Esta materia no tiene exámenes ni calificaciones cargadas', 'error'); return false; }
+        const [tipo, id] = inst.split(':');
+        return Actas.descargarActaExamen({ subjectId, instancia: { tipo, id }, filtro, formato, win });
+      },
     });
+    this._actaCargarInstancias();
+  },
 
-    const filtroTxt = [
-      this._filtroAnio ? `${this._filtroAnio}° año` : null,
-      this._filtroDivision ? `División ${this._filtroDivision}` : null,
-    ].filter(Boolean).join(' · ') || 'Todos los años y divisiones';
+  async _actaCargarInstancias() {
+    const wrap = document.getElementById('acta-prec-inst-wrap');
+    const sel  = document.getElementById('acta-prec-inst');
+    if (!wrap || !sel) return;
+    const esActa = document.getElementById('acta-prec-doc').value === 'acta';
+    wrap.style.display = esActa ? '' : 'none';
+    if (!esActa) return;
 
-    const seccionesHtml = Object.entries(porMateria).sort(([a], [b]) => a.localeCompare(b)).map(([materia, filas]) => {
-      const ordenadas = [...filas].sort((a, b) =>
-        Utils.nombrePlanilla(alumnoPorId[a.studentId]).localeCompare(Utils.nombrePlanilla(alumnoPorId[b.studentId])));
+    const subjectId = document.getElementById('acta-prec-materia').value;
+    sel.innerHTML = '<option value="">Cargando…</option>';
+    const [{ data: items }, { data: exams }] = await Promise.all([
+      sb.from('manual_grade_items').select('id, title, fecha').eq('subject_id', subjectId).order('fecha', { ascending: false }),
+      sb.from('exams').select('id, title, is_practice').eq('subject_id', subjectId),
+    ]);
+    if (document.getElementById('acta-prec-materia')?.value !== subjectId) return; // cambió mientras cargaba
 
-      const rowsHtml = ordenadas.map((f, i) => {
-        const a = alumnoPorId[f.studentId];
-        const letras = f.notaNumerica !== null ? Utils.numeroALetras(f.notaNumerica) : f.notaTexto;
-        return `<tr>
-          <td>${i + 1}</td>
-          <td>${Utils.nombrePlanilla(a)}</td>
-          <td>${a?.dni || ''}</td>
-          <td>${f.titulo} <span style="color:#888;font-size:.75em">(${f.origen})</span></td>
-          <td style="text-align:center">${f.notaTexto}</td>
-          <td>${letras}</td>
-        </tr>`;
-      }).join('');
-
-      return `
-        <h3 style="margin:22px 0 6px;font-size:.95rem">${materia}</h3>
-        <table>
-          <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Instancia</th><th>Nota</th><th>Nota en letras</th></tr></thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>`;
-    }).join('');
-
-    Utils.imprimirActa({
-      titulo: `Calificaciones — ${inst?.name || 'Institución'}`,
-      institucion: inst?.name,
-      lineasHeader: ['Informe de calificaciones'],
-      meta: `<div style="text-align:center">${filtroTxt} · Emitido: ${Utils.formatDate(Utils.hoyLocal())}</div>`,
-      bodyHtml: seccionesHtml,
-      firmas: ['Firma y aclaración — Preceptoría'],
-    });
+    const esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const opts = [
+      ...(exams || []).filter(e => !e.is_practice).map(e => `<option value="examen:${e.id}">Examen: ${esc(e.title)}</option>`),
+      ...(items || []).map(i => `<option value="manual:${i.id}">${esc(i.title)}${i.fecha ? ' (' + Utils.formatDate(i.fecha) + ')' : ''}</option>`),
+    ];
+    sel.innerHTML = opts.length ? opts.join('') : '<option value="">Sin exámenes ni calificaciones cargadas</option>';
   },
 };

@@ -490,10 +490,10 @@
       <button class="btn btn-ghost btn-sm" onclick="ProfesorExamenes.cerrarResultados()">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <input type="text" id="exam-res-libro" placeholder="Libro N°" style="width:90px;padding:6px 8px;font-size:.8rem">
-      <input type="text" id="exam-res-folio" placeholder="Folio N°" style="width:90px;padding:6px 8px;font-size:.8rem">
+      <input type="text" id="exam-res-libro" placeholder="Libro N° (opc.)" style="width:90px;padding:6px 8px;font-size:.8rem">
+      <input type="text" id="exam-res-folio" placeholder="Folio N° (opc.)" style="width:90px;padding:6px 8px;font-size:.8rem">
       <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="ProfesorExamenes.exportarResultados()">⬇ CSV</button>
-      <button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.exportarResultadosPDF()">📄 Acta (PDF)</button>
+      <button class="btn btn-primary btn-sm" onclick="ProfesorExamenes.exportarResultadosPDF()">📄 Acta</button>
     </div>
 
     <!-- Lista de resultados -->
@@ -677,6 +677,7 @@
 <script src="../js/sb.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/utils.js"></script>
+<script src="../js/actas.js"></script>
 <script src="../js/theme.js"></script>
 <script src="../js/profesor/materias.js"></script>
 <script src="../js/profesor/unidades.js"></script>

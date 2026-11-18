@@ -1,0 +1,33 @@
+Examen duplicado: "P1 - G8" ea8b6e47-718a-4224-a04a-fecfcbddfead -> 0bef0a93-cbfb-44ae-b4d7-03500a0857b0
+  -> 18 preguntas duplicadas
+Examen duplicado: "Informática Aplicada - 01" e9757334-4998-4d84-95d9-027fb4bed2d0 -> 2a8ed259-da99-4c70-b95e-a8a5eeaa529a
+  -> 8 preguntas duplicadas
+Examen duplicado: "P1 - G7" 6100f079-1034-4a4f-b7fa-d33d9c9f6078 -> 25b7d08f-1011-44e2-9b2a-f7beb8277b71
+  -> 18 preguntas duplicadas
+Examen duplicado: "P1 - G6" dc84ba37-2084-4fd1-b18e-310862e05495 -> 382e1283-6d55-4447-9ac3-c4b9324991e6
+  -> 18 preguntas duplicadas
+Examen duplicado: "P1 - G5" 4a5cadd5-c81d-47e4-aff4-75f856b4b602 -> d7b8feb2-17f5-4a7c-8f18-0842d18a4c66
+  -> 18 preguntas duplicadas
+
+Resultado recreado: alumno e1dd7e57-77aa-4200-9021-4f754ce2e790 examen "e9757334-4998-4d84-95d9-027fb4bed2d0"->"2a8ed259-da99-4c70-b95e-a8a5eeaa529a" nota 67 -> nuevo id c174d4aa-d16b-4646-9454-2d9ecc495de3
+Resultado recreado: alumno 8706941e-faad-40ad-8586-7427c15daf5a examen "6100f079-1034-4a4f-b7fa-d33d9c9f6078"->"25b7d08f-1011-44e2-9b2a-f7beb8277b71" nota 86 -> nuevo id 0db8b48c-cd59-44ac-a09e-db107caaddb3
+Resultado recreado: alumno 680798b7-c9b0-415b-8ea6-5dd14a48c503 examen "ea8b6e47-718a-4224-a04a-fecfcbddfead"->"0bef0a93-cbfb-44ae-b4d7-03500a0857b0" nota 62 -> nuevo id 6e6868e1-353c-425b-8001-1b4313e43673
+Resultado recreado: alumno e7a5dd8a-354e-462f-b1d4-79afc00cb762 examen "dc84ba37-2084-4fd1-b18e-310862e05495"->"382e1283-6d55-4447-9ac3-c4b9324991e6" nota 81 -> nuevo id d7c09bee-ccaa-4a86-9d23-b181f0ab089b
+Resultado recreado: alumno 1c680e37-fec8-4588-9447-9152e28c5b35 examen "6100f079-1034-4a4f-b7fa-d33d9c9f6078"->"25b7d08f-1011-44e2-9b2a-f7beb8277b71" nota 81 -> nuevo id 2cfbac2d-702a-4ad2-9ef0-3e2bfa482bec
+Resultado recreado: alumno 109e3736-8149-4457-afff-68d8a29efbd0 examen "e9757334-4998-4d84-95d9-027fb4bed2d0"->"2a8ed259-da99-4c70-b95e-a8a5eeaa529a" nota 100 -> nuevo id 282d85a1-eedb-4297-900e-d8da5074e5ad
+Resultado recreado: alumno 973ff3e0-eb54-4095-bd96-0b02873ba013 examen "e9757334-4998-4d84-95d9-027fb4bed2d0"->"2a8ed259-da99-4c70-b95e-a8a5eeaa529a" nota 75 -> nuevo id 566d2efd-1897-49c6-bc12-85cbf5b0ba92
+Resultado recreado: alumno 77b32b33-76b7-4d28-b8e7-f4c05d3176cd examen "4a5cadd5-c81d-47e4-aff4-75f856b4b602"->"d7b8feb2-17f5-4a7c-8f18-0842d18a4c66" nota 81 -> nuevo id bf9d2021-fe82-4a45-9665-97d194d356e6
+Resultado recreado: alumno 17edd7da-7996-4794-9b91-e6f4bbfcc442 examen "dc84ba37-2084-4fd1-b18e-310862e05495"->"382e1283-6d55-4447-9ac3-c4b9324991e6" nota 76 -> nuevo id ac371b6f-1361-4966-af9e-c487d8e6838e
+Resultado recreado: alumno 973ff3e0-eb54-4095-bd96-0b02873ba013 examen "dc84ba37-2084-4fd1-b18e-310862e05495"->"382e1283-6d55-4447-9ac3-c4b9324991e6" nota 86 -> nuevo id d7e16a83-3f1c-4b14-a57f-59a2076f08a0
+Resultado recreado: alumno 28585258-fdd8-4420-8eec-a1d525d70edf examen "6100f079-1034-4a4f-b7fa-d33d9c9f6078"->"25b7d08f-1011-44e2-9b2a-f7beb8277b71" nota 62 -> nuevo id 69c7ac18-3ab1-49d9-9a2c-c49bb629486a
+Resultado recreado: alumno 109e3736-8149-4457-afff-68d8a29efbd0 examen "6100f079-1034-4a4f-b7fa-d33d9c9f6078"->"25b7d08f-1011-44e2-9b2a-f7beb8277b71" nota 71 -> nuevo id 2610cadd-3394-4ab4-9d12-0858d6efe08d
+Resultado recreado: alumno 847b8eb7-5145-4c9d-8706-8dd48732bffb examen "ea8b6e47-718a-4224-a04a-fecfcbddfead"->"0bef0a93-cbfb-44ae-b4d7-03500a0857b0" nota 48 -> nuevo id 8c4e9e35-ab65-45e5-b583-f8eb956600e6
+Resultado recreado: alumno a168b876-6b1f-4df7-b2c3-43ce25912f21 examen "ea8b6e47-718a-4224-a04a-fecfcbddfead"->"0bef0a93-cbfb-44ae-b4d7-03500a0857b0" nota 57 -> nuevo id 7b1fd074-30c7-4ba0-9036-7721a207e1cb
+Resultado recreado: alumno 0d8b157d-bcb0-41af-b68c-238ba2e2c8ed examen "4a5cadd5-c81d-47e4-aff4-75f856b4b602"->"d7b8feb2-17f5-4a7c-8f18-0842d18a4c66" nota 86 -> nuevo id a01cede5-5cd7-4b82-92b3-bd1dfb122e56
+Resultado recreado: alumno 6fb49b75-1a0d-44e3-9a4b-5a17e9c99d44 examen "4a5cadd5-c81d-47e4-aff4-75f856b4b602"->"d7b8feb2-17f5-4a7c-8f18-0842d18a4c66" nota 57 -> nuevo id bd9ae391-b79e-4177-a41c-86815760e4a3
+Resultado recreado: alumno 99657592-5cd2-4c27-be25-61433a6b0637 examen "dc84ba37-2084-4fd1-b18e-310862e05495"->"382e1283-6d55-4447-9ac3-c4b9324991e6" nota 100 -> nuevo id ce8ddd56-fdd5-45b8-bbda-3198075c0319
+Resultado recreado: alumno a86167ef-959b-4ded-b8ab-0e5d424b2790 examen "6100f079-1034-4a4f-b7fa-d33d9c9f6078"->"25b7d08f-1011-44e2-9b2a-f7beb8277b71" nota 43 -> nuevo id 3fa751fe-66a0-4c4a-a0fe-ebbfe237474f
+Resultado recreado: alumno f092463c-fcb1-4d14-a738-1aeb3e500645 examen "ea8b6e47-718a-4224-a04a-fecfcbddfead"->"0bef0a93-cbfb-44ae-b4d7-03500a0857b0" nota 81 -> nuevo id 13906e42-9ef2-4bf7-bd6e-e6d251771173
+Resultado recreado: alumno e1dd7e57-77aa-4200-9021-4f754ce2e790 examen "ea8b6e47-718a-4224-a04a-fecfcbddfead"->"0bef0a93-cbfb-44ae-b4d7-03500a0857b0" nota 76 -> nuevo id a2e9a8e6-a050-47e2-beeb-9c9923173934
+
+TOTAL: 5 exámenes, 80 preguntas, 20/20 resultados recreados.

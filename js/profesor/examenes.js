@@ -480,54 +480,23 @@ const ProfesorExamenes = {
     );
   },
 
+  // Acta oficial (formato modelo_actas): lista a TODOS los inscriptos — los
+  // que no tienen resultado confirmado salen como "Ausente". Libro y Folio
+  // son opcionales (si quedan vacíos se completan a mano en el papel).
   exportarResultadosPDF() {
-    const todos = this._resultadosActuales || [];
-    const confirmados = todos.filter(r => r.status === 'confirmed');
-
-    if (!confirmados.length) { Utils.toast('Todavía no hay ningún resultado confirmado para generar el acta', 'error'); return; }
-
-    const pendientes = todos.length - confirmados.length;
-    if (pendientes > 0) {
-      Utils.toast(`El acta incluye solo los ${confirmados.length} ya confirmados — quedan ${pendientes} por revisar`, 'info');
-    }
-
+    const pendientes = (this._resultadosActuales || []).filter(r => r.status !== 'confirmed').length;
     const libro = document.getElementById('exam-res-libro').value.trim();
     const folio = document.getElementById('exam-res-folio').value.trim();
+    const exam = this._examActual;
 
-    const m = ProfesorState.materia;
-    const institucion = m.careers?.institutions?.name || '';
-    const carrera     = m.careers?.name || '';
-    const anioDiv = [m.year ? `${m.year}° año` : null, m.division ? `División ${m.division}` : null].filter(Boolean).join(' · ');
-
-    const filas = [...confirmados].sort((a, b) => Utils.nombrePlanilla(a.students).localeCompare(Utils.nombrePlanilla(b.students)));
-    const aprobados = filas.filter(r => Utils.notaFinal(r).score >= 6).length;
-
-    const rowsHtml = filas.map((r, i) => {
-      const { score: grade } = Utils.notaFinal(r);
-      return `<tr>
-        <td>${i + 1}</td>
-        <td>${Utils.nombrePlanilla(r.students)}</td>
-        <td style="text-align:center">${grade}</td>
-        <td>${Utils.numeroALetras(grade)}</td>
-      </tr>`;
-    }).join('');
-
-    Utils.imprimirActa({
-      titulo: `Acta — ${this._examActual.title}`,
-      institucion,
-      lineasHeader: [carrera, `Acta de examen${anioDiv ? ' — ' + anioDiv : ''}`].filter(Boolean),
-      meta: `<div class="meta-flex">
-        <span>Materia: <strong>${m.name || ''}</strong></span>
-        <span>Examen: <strong>${this._examActual.title}</strong></span>
-        <span>Libro N°: <strong>${libro || '______'}</strong> &nbsp;&nbsp; Folio N°: <strong>${folio || '______'}</strong></span>
-        <span>Fecha: ${Utils.formatDate(Utils.hoyLocal())}</span>
-      </div>`,
-      bodyHtml: `<table>
-        <thead><tr><th>#</th><th>Apellido y Nombre</th><th>Nota</th><th>Nota en letras</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>`,
-      resumen: `${filas.length} alumnos — ${aprobados} aprobados, ${filas.length - aprobados} desaprobados`,
-      firmas: ['Firma y aclaración — Docente', 'Firma y aclaración — Vocal 1', 'Firma y aclaración — Vocal 2'],
+    Actas.elegir({
+      titulo: 'Descargar acta',
+      descripcion: `Examen: ${exam.title}` + (pendientes ? ` — atención: ${pendientes} entrega${pendientes !== 1 ? 's' : ''} sin confirmar (salen como Ausente)` : ''),
+      onDescargar: (formato, filtro, win) => Actas.descargarActaExamen({
+        subjectId: ProfesorState.materia.id,
+        instancia: { tipo: 'examen', id: exam.id },
+        filtro, formato, win, libro, folio,
+      }),
     });
   },
 

@@ -39,7 +39,10 @@ const ProfesorCalificaciones = {
 
   _renderLista(totalAlumnos, cargadas) {
     const el = document.getElementById('calificaciones-content');
-    const addBtn = `<button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirModal()">+ Nueva instancia</button>`;
+    const addBtn = `<div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCondicion()" title="Listado de alumnos con su condición académica (PDF o Excel)">📋 Condición académica</button>
+      <button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirModal()">+ Nueva instancia</button>
+    </div>`;
 
     if (!this._items.length) {
       el.innerHTML = `
@@ -65,7 +68,7 @@ const ProfesorCalificaciones = {
               <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.verNotas('${i.id}')">Ver</button>
               <button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirCarga('${i.id}')">Cargar notas</button>
               <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsvDesdeLista('${i.id}')" title="Descargar CSV">⬇ CSV</button>
-              <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActaDesdeLista('${i.id}')" title="Descargar acta en PDF">📄 PDF</button>
+              <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActaDesdeLista('${i.id}')" title="Descargar acta (PDF o Excel)">📄 Acta</button>
               <button class="btn btn-ghost btn-sm" onclick='ProfesorCalificaciones.abrirModal(${JSON.stringify(i).replace(/'/g, "&#39;")})'>Editar</button>
               <button class="btn btn-danger btn-sm" onclick="ProfesorCalificaciones.eliminar('${i.id}','${i.title.replace(/'/g, "\\'")}')">Eliminar</button>
             </div>
@@ -134,11 +137,18 @@ const ProfesorCalificaciones = {
   async _fetchDatos(itemId) {
     const item = this._items.find(i => i.id === itemId) || (await sb.from('manual_grade_items').select('*').eq('id', itemId).single()).data;
 
-    const [{ data: roster }, { data: notas }] = await Promise.all([
+    const [{ data: roster }, { data: notas }, cond] = await Promise.all([
       sb.from('student_subjects').select('students(id, full_name, first_name, last_name, dni)')
         .eq('subject_id', item.subject_id),
       sb.from('manual_grades').select('*').eq('item_id', itemId),
+      sb.from('student_academic_conditions').select('student_id, condicion')
+        .eq('subject_id', item.subject_id).eq('anio_academico', Actas.anioLectivo()),
     ]);
+
+    // Condición académica (una por alumno y materia, vale para todas las instancias)
+    this._condiciones = {};
+    this._condicionesDisponibles = !cond.error;
+    (cond.data || []).forEach(c => { this._condiciones[c.student_id] = c.condicion; });
 
     const rosterOrdenado = (roster || []).map(r => r.students).filter(Boolean)
       .sort((a, b) => Utils.nombrePlanilla(a).localeCompare(Utils.nombrePlanilla(b)));
@@ -173,6 +183,7 @@ const ProfesorCalificaciones = {
           <td>${a.dni}</td>
           <td style="font-weight:700">${nota}</td>
           <td style="color:var(--text-2)">${n?.observaciones || '—'}</td>
+          <td>${this._condiciones[a.id] || '—'}</td>
         </tr>`;
     }).join('');
 
@@ -182,13 +193,13 @@ const ProfesorCalificaciones = {
         <h3>${item.title} <span style="font-size:.8rem;font-weight:400;color:var(--text-3)">(${item.tipo === 'numerica' ? 'numérica' : 'conceptual'}${item.fecha ? ' · ' + Utils.formatDate(item.fecha) : ''})</span></h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsv()">⬇ CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta (PDF)</button>
+          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta</button>
           <button class="btn btn-primary btn-sm" onclick="ProfesorCalificaciones.abrirCarga('${item.id}')">Cargar / editar</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Observaciones</th></tr></thead>
+          <thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Observaciones</th><th>Condición</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -233,6 +244,12 @@ const ProfesorCalificaciones = {
           <td>${a.dni}</td>
           <td>${campoNota}</td>
           <td><input type="text" id="obs-${a.id}" value="${nota?.observaciones ? nota.observaciones.replace(/"/g, '&quot;') : ''}" placeholder="Observaciones (opcional)" style="width:100%"></td>
+          <td>
+            <select id="cond-${a.id}" style="width:auto" ${this._condicionesDisponibles ? '' : 'disabled title="Falta correr sql/condicion-academica-alumno.sql en Supabase"'}>
+              <option value="">—</option>
+              ${Actas.CONDICIONES.map(c => `<option value="${c}" ${this._condiciones[a.id] === c ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </td>
         </tr>`;
     }).join('');
 
@@ -242,13 +259,17 @@ const ProfesorCalificaciones = {
         <h3>${item.title} <span style="font-size:.8rem;font-weight:400;color:var(--text-3)">(${item.tipo === 'numerica' ? 'numérica' : 'conceptual'}${item.fecha ? ' · ' + Utils.formatDate(item.fecha) : ''})</span></h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarCsv()">⬇ CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta (PDF)</button>
+          <button class="btn btn-ghost btn-sm" onclick="ProfesorCalificaciones.exportarActa()">📄 Acta</button>
           <button class="btn btn-primary btn-sm" id="calif-save-all" onclick="ProfesorCalificaciones.guardarTodas()">Guardar notas</button>
         </div>
       </div>
+      <p style="font-size:.78rem;color:var(--text-3);margin:-4px 0 10px">
+        La <strong>condición académica</strong> (Regular / Promocional / Libre) es una por alumno para toda la materia:
+        se guarda con el botón "Guardar notas" y se usa en el listado de condición y para filtrar las actas.
+      </p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Observaciones</th></tr></thead>
+          <thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Observaciones</th><th>Condición</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -277,14 +298,50 @@ const ProfesorCalificaciones = {
       };
     }).filter(r => r.score !== null || r.concepto !== null || r.observaciones !== null);
 
-    if (!payload.length) { Utils.toast('No hay ninguna nota para guardar', 'error'); return; }
+    // Condición académica: se guarda la que esté elegida y se borra la que se dejó en "—"
+    const condUpsert = [], condBorrar = [];
+    if (this._condicionesDisponibles) {
+      this._roster.forEach(a => {
+        const v = document.getElementById(`cond-${a.id}`)?.value || '';
+        if (v && v !== this._condiciones[a.id]) {
+          condUpsert.push({
+            subject_id: item.subject_id, student_id: a.id, anio_academico: Actas.anioLectivo(),
+            condicion: v, updated_at: new Date().toISOString(),
+          });
+        } else if (!v && this._condiciones[a.id]) {
+          condBorrar.push(a.id);
+        }
+      });
+    }
+
+    if (!payload.length && !condUpsert.length && !condBorrar.length) {
+      Utils.toast('No hay ninguna nota para guardar', 'error'); return;
+    }
 
     Utils.btnLoading(btn, true);
-    const { error } = await sb.from('manual_grades').upsert(payload, { onConflict: 'item_id,student_id' });
+    const errores = [];
+    if (payload.length) {
+      const { error } = await sb.from('manual_grades').upsert(payload, { onConflict: 'item_id,student_id' });
+      if (error) errores.push(error.message);
+    }
+    if (condUpsert.length) {
+      const { error } = await sb.from('student_academic_conditions')
+        .upsert(condUpsert, { onConflict: 'subject_id,student_id,anio_academico' });
+      if (error) errores.push('condición: ' + error.message);
+    }
+    if (condBorrar.length) {
+      const { error } = await sb.from('student_academic_conditions').delete()
+        .eq('subject_id', item.subject_id).eq('anio_academico', Actas.anioLectivo()).in('student_id', condBorrar);
+      if (error) errores.push('condición: ' + error.message);
+    }
     Utils.btnLoading(btn, false);
 
-    if (error) { Utils.toast('Error al guardar: ' + error.message, 'error'); return; }
-    Utils.toast(`${payload.length} notas guardadas`);
+    if (errores.length) { Utils.toast('Error al guardar: ' + errores.join(' · '), 'error'); return; }
+    const cambiosCond = condUpsert.length + condBorrar.length;
+    Utils.toast([
+      payload.length ? `${payload.length} notas guardadas` : null,
+      cambiosCond ? `${cambiosCond} condición${cambiosCond !== 1 ? 'es' : ''} actualizada${cambiosCond !== 1 ? 's' : ''}` : null,
+    ].filter(Boolean).join(' · '));
     this.abrirCarga(item.id);
   },
 
@@ -295,7 +352,7 @@ const ProfesorCalificaciones = {
   },
 
   exportarActa() {
-    this._generarActaPDF(this._itemActual, this._roster, this._notas);
+    this.exportarActaDesdeLista(this._itemActual.id);
   },
 
   // ── Exportaciones directas desde la lista (sin entrar a la instancia) ──
@@ -305,9 +362,29 @@ const ProfesorCalificaciones = {
     this._exportarCsvDatos(item, roster, notas);
   },
 
-  async exportarActaDesdeLista(itemId) {
-    const { item, roster, notas } = await this._fetchDatos(itemId);
-    this._generarActaPDF(item, roster, notas);
+  // Acta oficial (formato modelo_actas) — se elige qué alumnos y PDF/Excel
+  exportarActaDesdeLista(itemId) {
+    const item = this._items.find(i => i.id === itemId) || this._itemActual;
+    Actas.elegir({
+      titulo: 'Descargar acta',
+      descripcion: item ? `Instancia: ${item.title}` : '',
+      onDescargar: (formato, filtro, win) => Actas.descargarActaExamen({
+        subjectId: ProfesorState.materia.id,
+        instancia: { tipo: 'manual', id: itemId },
+        filtro, formato, win,
+      }),
+    });
+  },
+
+  // Listado de condición académica de la materia
+  exportarCondicion() {
+    Actas.elegir({
+      titulo: 'Condición académica',
+      descripcion: `${ProfesorState.materia.name} — listado de alumnos con su condición`,
+      onDescargar: (formato, filtro, win) => Actas.descargarCondicion({
+        subjectId: ProfesorState.materia.id, filtro, formato, win,
+      }),
+    });
   },
 
   _exportarCsvDatos(item, roster, notas) {
@@ -316,46 +393,5 @@ const ProfesorCalificaciones = {
       return [Utils.nombrePlanilla(a), a.dni, n?.score ?? n?.concepto ?? '', n?.observaciones ?? ''];
     });
     Utils.descargarCsv(`${item.title.replace(/[^a-z0-9]+/gi, '_')}.csv`, ['Alumno', 'DNI', 'Nota', 'Observaciones'], filas);
-  },
-
-  _generarActaPDF(item, roster, notas) {
-    const conNota = roster.filter(a => notas[a.id]);
-    if (!conNota.length) { Utils.toast('Todavía no hay ninguna nota cargada en esta instancia', 'error'); return; }
-
-    const m = ProfesorState.materia;
-    const institucion = m.careers?.institutions?.name || '';
-    const carrera     = m.careers?.name || '';
-    const anioDiv = [m.year ? `${m.year}° año` : null, m.division ? `División ${m.division}` : null].filter(Boolean).join(' · ');
-
-    const rowsHtml = conNota.map((a, i) => {
-      const n = notas[a.id];
-      const esNumerica = n.score !== null;
-      const notaTexto = esNumerica ? n.score : (n.concepto || '—');
-      const notaLetras = esNumerica ? Utils.numeroALetras(n.score) : (n.concepto || '—');
-      return `<tr>
-        <td>${i + 1}</td>
-        <td>${Utils.nombrePlanilla(a)}</td>
-        <td>${a.dni}</td>
-        <td style="text-align:center">${notaTexto}</td>
-        <td>${notaLetras}</td>
-      </tr>`;
-    }).join('');
-
-    Utils.imprimirActa({
-      titulo: `Acta — ${item.title}`,
-      institucion,
-      lineasHeader: [carrera, `Acta de calificaciones${anioDiv ? ' — ' + anioDiv : ''}`].filter(Boolean),
-      meta: `<div class="meta-flex">
-        <span>Materia: <strong>${m.name || ''}</strong></span>
-        <span>Instancia: <strong>${item.title}</strong></span>
-        <span>Fecha: ${item.fecha ? Utils.formatDate(item.fecha) : Utils.formatDate(Utils.hoyLocal())}</span>
-      </div>`,
-      bodyHtml: `<table>
-        <thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Nota</th><th>Nota en letras</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>`,
-      resumen: `${conNota.length} alumno${conNota.length !== 1 ? 's' : ''} con nota cargada de ${roster.length} inscriptos.`,
-      firmas: ['Firma y aclaración — Docente'],
-    });
   },
 };
