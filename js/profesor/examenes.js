@@ -645,8 +645,12 @@ const ProfesorExamenes = {
           <div>
             <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px">Nota final (0–100)</div>
             <input type="number" id="rev-nota-final" value="${finalScore}" min="0" max="100" step="1"
-              ${isConfirmed ? 'disabled' : ''}
+              ${isConfirmed ? 'disabled' : ''} oninput="ProfesorExamenes._estadoRecalcular()"
               style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-base);color:var(--text-1);font-size:.95rem">
+            ${isConfirmed ? '' : `
+            <button class="btn btn-ghost btn-sm" id="rev-recalc-btn" style="margin-top:6px;width:100%"
+              onclick="ProfesorExamenes.recalcularNota()">↻ Recalcular nota</button>
+            <div id="rev-recalc-aviso" style="font-size:.72rem;color:var(--warning, #f59e0b);margin-top:4px"></div>`}
           </div>
         </div>
         <div>
@@ -664,6 +668,35 @@ const ProfesorExamenes = {
              <button class="btn btn-primary" id="rev-confirm-btn" onclick="ProfesorExamenes.confirmarResultado('${resultado.id}')">✓ Confirmar y liberar</button>`
         }
       </div>`;
+
+    this._estadoRecalcular();
+  },
+
+  // Habilita "Recalcular nota" solo cuando la nota final no coincide con la
+  // automática (ej: se marcó una respuesta como correcta/incorrecta, o se
+  // escribió una nota a mano).
+  _estadoRecalcular() {
+    const btn   = document.getElementById('rev-recalc-btn');
+    const input = document.getElementById('rev-nota-final');
+    const aviso = document.getElementById('rev-recalc-aviso');
+    if (!btn || !input || !this._revisionData) return;
+
+    const auto = this._calcAutoGrade();
+    const desfasada = (parseInt(input.value) || 0) !== auto;
+    btn.disabled = !desfasada;
+    btn.className = `btn ${desfasada ? 'btn-primary' : 'btn-ghost'} btn-sm`;
+    btn.textContent = desfasada ? `↻ Recalcular nota (${Math.round(auto / 10 * 10) / 10}/10)` : '✓ Nota al día';
+    if (aviso) aviso.textContent = desfasada ? 'La nota final no coincide con las respuestas marcadas.' : '';
+  },
+
+  // Pasa la nota automática (según las respuestas marcadas ✓/✗) a la nota final.
+  // No guarda: hay que "Guardar borrador" o "Confirmar y liberar" después.
+  recalcularNota() {
+    const input = document.getElementById('rev-nota-final');
+    if (!input || !this._revisionData) return;
+    input.value = this._calcAutoGrade();
+    this._renderRevision();
+    Utils.toast('Nota recalculada — acordate de guardar o confirmar');
   },
 
   async _toggleRespuesta(qId, setCorrect) {
