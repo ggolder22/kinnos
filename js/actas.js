@@ -21,7 +21,15 @@ const Actas = {
   ESCUDO_URL: '/img/actas/escudo.png',
   EXCELJS_URL: 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
 
-  FILAS_POR_HOJA: 30,     // acta de examen: alumnos por hoja Legal
+  // Acta de examen — alumnos por hoja Legal. El encabezado va solo en la
+  // hoja 1 y los totales + firmas solo en la última, así que la capacidad
+  // depende de qué lleva cada hoja (medido para PDF y Excel, con margen).
+  FILAS_HOJA: {
+    unica:   30,  // encabezado + totales/firmas
+    primera: 36,  // encabezado, sin firmas
+    medio:   52,  // ni encabezado ni firmas
+    ultima:  46,  // totales/firmas, sin encabezado
+  },
   NOTA_APROBACION: 6,     // para el conteo de Aprobados / Desaprobados
 
   CONDICIONES: ['Regular', 'Promocional', 'Libre'],
@@ -192,7 +200,7 @@ const Actas = {
       curso: this._curso(ctx.materia, inst.division),
       libro, folio,
       presidente: ctx.presidente,
-      fecha: inst.fecha ? Utils.formatDate(inst.fecha) : '',
+      fecha: Utils.formatDate(Utils.hoyLocal()),   // fecha del día en que se imprime/descarga
       unidad: (ctx.materia.name || '').toUpperCase(),
       instancia: inst.titulo,
       filas,
@@ -277,10 +285,24 @@ const Actas = {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   },
 
-  _trozos(arr, n) {
-    const out = [];
-    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-    return out.length ? out : [[]];
+  // Reparte los alumnos del acta en hojas: [{ filas, primera, ultima }].
+  // Nunca deja las firmas solas en una hoja: la última lleva al menos 1 alumno.
+  _paginarActa(filas) {
+    const C = this.FILAS_HOJA;
+    const hojas = [];
+    let i = 0;
+    do {
+      const primera = hojas.length === 0;
+      const resto = filas.length - i;
+      if (resto <= (primera ? C.unica : C.ultima)) {
+        hojas.push({ filas: filas.slice(i), primera, ultima: true });
+        break;
+      }
+      const n = Math.min(primera ? C.primera : C.medio, resto - 1);
+      hojas.push({ filas: filas.slice(i, i + n), primera, ultima: false });
+      i += n;
+    } while (i < filas.length);
+    return hojas;
   },
 
   // Imagen → { dataUrl, ext, w, h } (null si no se pudo cargar)
@@ -345,7 +367,7 @@ const Actas = {
   },
 
   _CSS_PAPEL: `
-    @page { size: legal portrait; margin: 12mm 14mm; }
+    @page { size: 8.5in 14in; margin: 12mm 14mm; }  /* Legal: 21,6 × 35,6 cm */
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; }
     body { font-family: Calibri, Carlito, 'Segoe UI', Arial, sans-serif; color: #000; font-size: 11pt;
@@ -364,14 +386,12 @@ const Actas = {
 
   async _actaPDF(d, win, archivo) {
     const [escudo, logo] = await Promise.all([this._imagen(this.ESCUDO_URL), this._imagen(d.logoUrl)]);
-    const hojas = this._trozos(d.filas, this.FILAS_POR_HOJA);
+    const hojas = this._paginarActa(d.filas);
     const e = v => this._esc(v);
     const col = '<colgroup><col style="width:5.3%"><col style="width:40.2%"><col style="width:17.3%"><col style="width:16%"><col style="width:21.2%"></colgroup>';
 
-    const hojaHtml = (filas, idx) => {
-      const ultima = idx === hojas.length - 1;
-      return `
-      <div class="hoja">
+    // Encabezado completo: SOLO en la hoja 1
+    const encabezado = `
         <div class="cab">
           <div class="cab-izq">
             ${escudo ? `<img src="${escudo.dataUrl}" class="escudo">` : '<div style="height:44pt"></div>'}
@@ -395,28 +415,32 @@ const Actas = {
           <tr><td colspan="5" class="sb esp"></td></tr>
           <tr><td colspan="5" class="b">Unidad Curricular: ${e(d.unidad)}</td></tr>
           <tr><td colspan="5" class="sb esp"></td></tr>
-        </table>
+        </table>`;
 
-        <table class="alumnos">${col}
-          <tr><td>N°</td><td class="c">Apellido y Nombre</td><td class="c">D.N.I</td><td class="c">Calif. En Núm.</td><td class="c">Calif. En Letra</td></tr>
-          ${filas.map(f => `<tr>
-            <td>${f.orden}</td><td>${e(f.nombre)}</td><td>${e(f.dni)}</td>
-            <td class="c">${e(f.num)}</td><td>${e(f.letra)}</td></tr>`).join('')}
-        </table>
-
-        <div class="pie">
-          ${ultima
-            ? `<div class="totales">${Object.entries(d.totales).map(([k, v]) => `<div><div>${k}</div><div class="num">${v}</div></div>`).join('')}</div>`
-            : '<div class="continua">Continúa en la hoja siguiente</div>'}
+    // Totales + firmas: SOLO en la última hoja, las firmas debajo de los totales
+    const cierre = `
+          <div class="totales">${Object.entries(d.totales).map(([k, v]) => `<div><div>${k}</div><div class="num">${v}</div></div>`).join('')}</div>
           <div class="firmas">
             <div><div class="linea"></div>Vocal</div>
             <div><div class="linea"></div>Presidente</div>
             <div><div class="linea"></div>Vocal</div>
-          </div>
+          </div>`;
+
+    const hojaHtml = (h, idx) => `
+      <div class="hoja">
+        ${h.primera ? encabezado : ''}
+        <table class="alumnos">${col}
+          <tr><td>N°</td><td class="c">Apellido y Nombre</td><td class="c">D.N.I</td><td class="c">Calif. En Núm.</td><td class="c">Calif. En Letra</td></tr>
+          ${h.filas.map(f => `<tr>
+            <td>${f.orden}</td><td>${e(f.nombre)}</td><td>${e(f.dni)}</td>
+            <td class="c">${e(f.num)}</td><td>${e(f.letra)}</td></tr>`).join('')}
+        </table>
+        ${h.ultima ? `<div class="cierre">${cierre}</div>` : ''}
+        <div class="pie">
+          ${h.ultima ? '' : '<div class="continua">Continúa en la hoja siguiente</div>'}
           ${hojas.length > 1 ? `<div class="nro-hoja">Hoja ${idx + 1} de ${hojas.length}</div>` : ''}
         </div>
       </div>`;
-    };
 
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${e(archivo)}</title>
       <style>${this._CSS_PAPEL}
@@ -434,13 +458,14 @@ const Actas = {
         .datos td { height: 15pt; white-space: normal; }
         .datos td.esp { height: 13pt; }
         .alumnos td { height: 15.75pt; }
-        .pie { margin-top: auto; padding-top: 10pt; }
+        .cierre { margin-top: 16pt; }
         .totales { display: flex; justify-content: space-around; text-align: center; font-size: 11pt; }
         .totales .num { font-weight: bold; margin-top: 3pt; }
-        .continua { text-align: center; font-size: 9pt; font-style: italic; color: #333; }
         .firmas { display: flex; justify-content: space-between; text-align: center; margin-top: 52pt; font-size: 11pt; }
         .firmas > div { width: 30%; }
         .firmas .linea { border-top: 1px dashed #000; margin: 0 10% 3pt; }
+        .pie { margin-top: auto; padding-top: 10pt; }
+        .continua { text-align: center; font-size: 9pt; font-style: italic; color: #333; }
         .nro-hoja { text-align: right; font-size: 8pt; margin-top: 6pt; color: #333; }
       </style></head><body>${hojas.map(hojaHtml).join('')}</body></html>`;
 
@@ -462,101 +487,98 @@ const Actas = {
       },
     });
     ws.columns = [{ width: 4.86 }, { width: 36.57 }, { width: 15.71 }, { width: 14.57 }, { width: 19.29 }];
+    const F = (o = {}) => ({ name: 'Calibri', size: 11, ...o });
 
-    const imgEscudo = escudo ? wb.addImage({ base64: escudo.dataUrl.split(',')[1], extension: escudo.ext }) : null;
-    const imgLogo   = logo   ? wb.addImage({ base64: logo.dataUrl.split(',')[1],   extension: logo.ext })   : null;
+    // ── Encabezado (filas 1-16): SOLO en la hoja 1 ──
+    if (escudo) {
+      const id = wb.addImage({ base64: escudo.dataUrl.split(',')[1], extension: escudo.ext });
+      ws.addImage(id, { tl: { col: 1.25, row: 0.15 }, ext: this._encajar(escudo, 40, 44) });
+    }
+    if (logo) {
+      const id = wb.addImage({ base64: logo.dataUrl.split(',')[1], extension: logo.ext });
+      ws.addImage(id, { tl: { col: 4.35, row: 0.05 }, ext: this._encajar(logo, 80, 44) });
+    }
+    this.MINISTERIO.forEach((t, i) => {
+      const c = ws.getCell(4 + i, 1);
+      c.value = (i < 2 ? '      ' : '') + t;
+      c.font = F({ size: 8, bold: true });
+    });
+    ws.mergeCells(4, 4, 6, 5);
+    Object.assign(ws.getCell(4, 4), {
+      value: d.institucionOficial.toUpperCase(),
+      font: F({ size: 8, bold: true }),
+      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+    });
 
-    const F  = (o = {}) => ({ name: 'Calibri', size: 11, ...o });
-    const hojas = this._trozos(d.filas, this.FILAS_POR_HOJA);
-    let r0 = 1; // primera fila de la hoja actual
+    this._xMerge(ws, 7, 1, 7, 5, d.titulo, F({ bold: true }), { horizontal: 'center' });
+    [['Nivel:', this.NIVEL, `Libro N°: ${d.libro}`],
+     ['Institución Educativa:', d.institucion, `Folio N°: ${d.folio}`],
+     ['Modalidad:', d.modalidad, `Curso: ${d.curso}`]].forEach(([a, b, c], i) => {
+      const r = 8 + i;
+      this._xMerge(ws, r, 1, r, 2, a, F({ bold: true }), { horizontal: 'center' });
+      this._xMerge(ws, r, 3, r, 4, b, F({ bold: true }), { horizontal: 'left', shrinkToFit: true });
+      this._xMerge(ws, r, 5, r, 5, c, F({ bold: true }), {});
+    });
 
-    hojas.forEach((filas, idx) => {
-      const ultima = idx === hojas.length - 1;
-      const R = n => r0 + n - 1;                 // fila relativa (1 = primera de la hoja)
-      const cell = (n, c) => ws.getCell(R(n), c);
+    this._xMerge(ws, 12, 1, 12, 3, `Presidente: ${d.presidente}`, F({ bold: true }), { horizontal: 'left' });
+    this._xMerge(ws, 12, 4, 12, 4, 'Fecha', F({ bold: true }), {});
+    ws.getCell(12, 4).border = { left: { style: 'thin' }, top: { style: 'thin' }, bottom: { style: 'thin' } };
+    this._xMerge(ws, 12, 5, 12, 5, d.fecha, F({ bold: true }), {});
+    this._xMerge(ws, 13, 1, 13, 3, 'Vocal:', F({ bold: true }), { horizontal: 'left' });
+    this._xMerge(ws, 14, 1, 14, 3, 'Vocal:', F({ bold: true }), { horizontal: 'left' });
 
-      // Encabezado (filas 1-6): escudo + ministerio a la izquierda, logo + institución a la derecha
-      if (imgEscudo !== null) ws.addImage(imgEscudo, { tl: { col: 1.25, row: R(1) - 1 + 0.15 }, ext: this._encajar(escudo, 40, 44) });
-      if (imgLogo   !== null) ws.addImage(imgLogo,   { tl: { col: 4.35, row: R(1) - 1 + 0.05 }, ext: this._encajar(logo, 80, 44) });
-      this.MINISTERIO.forEach((t, i) => {
-        const c = cell(4 + i, 1);
-        c.value = (i < 2 ? '      ' : '') + t;
-        c.font = F({ size: 8, bold: true });
-      });
-      ws.mergeCells(R(4), 4, R(6), 5);
-      Object.assign(cell(4, 4), {
-        value: d.institucionOficial.toUpperCase(),
-        font: F({ size: 8, bold: true }),
-        alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-      });
+    ws.getRow(15).height = 15.75;
+    ws.getRow(16).height = 15.75;
+    this._xMerge(ws, 16, 1, 16, 5, `Unidad Curricular: ${d.unidad}`, F({ bold: true }), { horizontal: 'left' });
 
-      // Título y datos de la mesa (filas 7-10)
-      this._xMerge(ws, R(7), 1, R(7), 5, d.titulo, F({ bold: true }), { horizontal: 'center' });
-      [['Nivel:', this.NIVEL, `Libro N°: ${d.libro}`],
-       ['Institución Educativa:', d.institucion, `Folio N°: ${d.folio}`],
-       ['Modalidad:', d.modalidad, `Curso: ${d.curso}`]].forEach(([a, b, c], i) => {
-        const r = R(8 + i);
-        this._xMerge(ws, r, 1, r, 2, a, F({ bold: true }), { horizontal: 'center' });
-        this._xMerge(ws, r, 3, r, 4, b, F({ bold: true }), { horizontal: 'left', shrinkToFit: true });
-        this._xMerge(ws, r, 5, r, 5, c, F({ bold: true }), {});
-      });
+    // ── Hojas: títulos de columna + alumnos (+ totales y firmas en la última) ──
+    const hojas = this._paginarActa(d.filas);
+    let r = 18; // la fila 17 queda en blanco, como en el modelo
 
-      // Tribunal (filas 12-14)
-      this._xMerge(ws, R(12), 1, R(12), 3, `Presidente: ${d.presidente}`, F({ bold: true }), { horizontal: 'left' });
-      this._xMerge(ws, R(12), 4, R(12), 4, 'Fecha', F({ bold: true }), {});
-      cell(12, 4).border = { left: { style: 'thin' }, top: { style: 'thin' }, bottom: { style: 'thin' } };
-      this._xMerge(ws, R(12), 5, R(12), 5, d.fecha, F({ bold: true }), {});
-      this._xMerge(ws, R(13), 1, R(13), 3, 'Vocal:', F({ bold: true }), { horizontal: 'left' });
-      this._xMerge(ws, R(14), 1, R(14), 3, 'Vocal:', F({ bold: true }), { horizontal: 'left' });
-
-      // Unidad curricular (fila 16)
-      ws.getRow(R(15)).height = 15.75;
-      ws.getRow(R(16)).height = 15.75;
-      this._xMerge(ws, R(16), 1, R(16), 5, `Unidad Curricular: ${d.unidad}`, F({ bold: true }), { horizontal: 'left' });
-
-      // Tabla de alumnos (fila 18 = encabezado)
+    hojas.forEach((h, idx) => {
       ['N°', 'Apellido y Nombre', 'D.N.I', 'Calif. En Núm.', 'Calif. En Letra'].forEach((t, i) => {
-        this._xMerge(ws, R(18), i + 1, R(18), i + 1, t, F(), i ? { horizontal: 'center' } : {});
+        this._xMerge(ws, r, i + 1, r, i + 1, t, F(), i ? { horizontal: 'center' } : {});
       });
-      filas.forEach((f, i) => {
-        const r = R(19 + i);
+      r++;
+      h.filas.forEach(f => {
         ws.getRow(r).height = 15.75;
         this._xMerge(ws, r, 1, r, 1, f.orden, F(), { horizontal: 'left' });
         this._xMerge(ws, r, 2, r, 2, f.nombre, F(), { shrinkToFit: true });
         this._xMerge(ws, r, 3, r, 3, f.dni, F(), {});
         this._xMerge(ws, r, 4, r, 4, f.num, F(), { horizontal: 'center' });
         this._xMerge(ws, r, 5, r, 5, f.letra, F(), { shrinkToFit: true });
+        r++;
       });
+      r++; // fila en blanco
 
-      // Pie: totales (solo última hoja) + firmas
-      let rp = R(19 + filas.length) + 1;
-      if (ultima) {
-        const t = Object.entries(d.totales).map(([k, v]) => `${k}: ${v}`).join('        ');
-        ws.mergeCells(rp, 1, rp, 5);
-        Object.assign(ws.getCell(rp, 1), { value: t, font: F(), alignment: { horizontal: 'center' } });
-      } else {
-        ws.mergeCells(rp, 1, rp, 5);
-        Object.assign(ws.getCell(rp, 1), { value: 'Continúa en la hoja siguiente', font: F({ size: 9, italic: true }), alignment: { horizontal: 'center' } });
+      const nroHoja = hojas.length > 1 ? `Hoja ${idx + 1} de ${hojas.length}` : '';
+      if (!h.ultima) {
+        ws.mergeCells(r, 1, r, 4);
+        Object.assign(ws.getCell(r, 1), { value: 'Continúa en la hoja siguiente', font: F({ size: 9, italic: true }), alignment: { horizontal: 'center' } });
+        Object.assign(ws.getCell(r, 5), { value: nroHoja, font: F({ size: 8 }), alignment: { horizontal: 'right' } });
+        ws.getRow(r).addPageBreak();
+        r++;
+        return;
       }
-      rp += 4;
+
+      // Última hoja: totales y, debajo, las firmas
+      ws.mergeCells(r, 1, r, 5);
+      Object.assign(ws.getCell(r, 1), {
+        value: Object.entries(d.totales).map(([k, v]) => `${k}: ${v}`).join('        '),
+        font: F(), alignment: { horizontal: 'center' },
+      });
+      r += 4;
       const lin = '----------------------------------';
-      ws.getCell(rp, 2).value = lin;
-      ws.mergeCells(rp, 3, rp, 4); ws.getCell(rp, 3).value = lin;
-      ws.getCell(rp, 5).value = lin;
-      ws.getCell(rp + 1, 2).value = 'Vocal';
-      ws.mergeCells(rp + 1, 3, rp + 1, 4); ws.getCell(rp + 1, 3).value = 'Presidente';
-      ws.getCell(rp + 1, 5).value = 'Vocal';
-      [rp, rp + 1].forEach(r => [2, 3, 5].forEach(c => {
-        Object.assign(ws.getCell(r, c), { font: F(), alignment: { horizontal: 'center' } });
+      ws.getCell(r, 2).value = lin;
+      ws.mergeCells(r, 3, r, 4); ws.getCell(r, 3).value = lin;
+      ws.getCell(r, 5).value = lin;
+      ws.getCell(r + 1, 2).value = 'Vocal';
+      ws.mergeCells(r + 1, 3, r + 1, 4); ws.getCell(r + 1, 3).value = 'Presidente';
+      ws.getCell(r + 1, 5).value = 'Vocal';
+      [r, r + 1].forEach(rr => [2, 3, 5].forEach(c => {
+        Object.assign(ws.getCell(rr, c), { font: F(), alignment: { horizontal: 'center' } });
       }));
-      let ultimaFila = rp + 1;
-      if (hojas.length > 1) {
-        ultimaFila = rp + 2;
-        Object.assign(ws.getCell(ultimaFila, 5), { value: `Hoja ${idx + 1} de ${hojas.length}`, font: F({ size: 8 }), alignment: { horizontal: 'right' } });
-      }
-
-      if (!ultima) ws.getRow(ultimaFila).addPageBreak();
-      r0 = ultimaFila + 1;
+      if (nroHoja) Object.assign(ws.getCell(r + 2, 5), { value: nroHoja, font: F({ size: 8 }), alignment: { horizontal: 'right' } });
     });
 
     await this._bajarExcel(wb, archivo);
