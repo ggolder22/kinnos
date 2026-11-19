@@ -25,10 +25,10 @@ const Actas = {
   // hoja 1 y los totales + firmas solo en la última, así que la capacidad
   // depende de qué lleva cada hoja (medido para PDF y Excel, con margen).
   FILAS_HOJA: {
-    unica:   30,  // encabezado + totales/firmas
-    primera: 36,  // encabezado, sin firmas
-    medio:   52,  // ni encabezado ni firmas
-    ultima:  46,  // totales/firmas, sin encabezado
+    unica:   34,  // encabezado + totales/firmas
+    primera: 38,  // encabezado, sin firmas
+    medio:   54,  // ni encabezado ni firmas
+    ultima:  47,  // totales/firmas, sin encabezado
   },
   NOTA_APROBACION: 6,     // para el conteo de Aprobados / Desaprobados
 
@@ -458,10 +458,10 @@ const Actas = {
         .datos td { height: 15pt; white-space: normal; }
         .datos td.esp { height: 13pt; }
         .alumnos td { height: 15.75pt; }
-        .cierre { margin-top: 16pt; }
+        .cierre { margin-top: 12pt; }
         .totales { display: flex; justify-content: space-around; text-align: center; font-size: 11pt; }
         .totales .num { font-weight: bold; margin-top: 3pt; }
-        .firmas { display: flex; justify-content: space-between; text-align: center; margin-top: 52pt; font-size: 11pt; }
+        .firmas { display: flex; justify-content: space-between; text-align: center; margin-top: 40pt; font-size: 11pt; }
         .firmas > div { width: 30%; }
         .firmas .linea { border-top: 1px dashed #000; margin: 0 10% 3pt; }
         .pie { margin-top: auto; padding-top: 10pt; }
@@ -483,7 +483,7 @@ const Actas = {
       pageSetup: {
         paperSize: 5, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
         horizontalCentered: true,
-        margins: { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 },
+        margins: { left: 0.7, right: 0.7, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 },
       },
     });
     ws.columns = [{ width: 4.86 }, { width: 36.57 }, { width: 15.71 }, { width: 14.57 }, { width: 19.29 }];
